@@ -96,6 +96,16 @@ EXPO_PUBLIC_MARKET_DATA=yahoo npx expo start -c    # terminal 2: the app
 Other sources (Alpaca keys for development, or our own backend) are
 configured in `.env.example`.
 
+### Host the web build from any path
+
+```bash
+EXPO_PUBLIC_INTELLIGENCE=fixture node scripts/export-web-hosted.js   # → dist-hosted/
+```
+
+`expo export` assumes the site root; this script makes the build relative
+and patches the route loader so the folder works from a subpath or a hosted
+page. Serve the folder and open `index.html`.
+
 ### Draft a thesis from your own belief (Claude)
 
 The same demo server drafts thesis trees when the Anthropic SDK finds
@@ -115,6 +125,7 @@ draft so the flow can be demoed offline.
 | `npm run web`       | Run in the browser                   |
 | `npm run market-data` | Demo server on :8787: market data (Yahoo Finance) and thesis drafting (Claude) |
 | `npm run draft-profile -- AMD` | Draft the catalyst map for a symbol with Claude, into `server/drafts/` for review |
+| `node scripts/export-web-hosted.js` | Web build that works from any path (see above) |
 | `npm test`          | Jest unit tests (domain, data, state) |
 | `npm run typecheck` | `tsc --noEmit`                       |
 | `npm run lint`      | ESLint via `expo lint`               |

@@ -46,3 +46,6 @@ example
 # Audit log of model outputs from the demo server, and drafts awaiting review
 server/logs/
 server/drafts/
+
+# Hosted web builds
+dist-hosted/
