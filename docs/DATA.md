@@ -152,6 +152,32 @@ app (EXPO_PUBLIC_MARKET_DATA=yahoo) ──GET /chains/NVDA?minExpiration=…─�
 - Chains are cached for 5 minutes to stay under Yahoo's rate limits.
 - Run it on your own machine during US market hours, and keep it to demos.
 
+## Company information and financials
+
+The stock and bet screens show what a company does and how it is doing
+(sales, margins, cash and debt, multiples, next earnings) or what a fund
+holds. This is reference data, not a price feed, and it changes quarterly.
+
+- **Now:** rounded sample figures in `src/data/companySamples.ts`, labelled
+  "sample" on every screen (`EXPO_PUBLIC_FUNDAMENTALS=sample`, the default).
+- **Demo:** the demo server's `GET /company/{symbol}` maps Yahoo Finance's
+  quote summary (`server/fundamentals.ts`). Same caveats as the chains:
+  unofficial endpoints, terms that don't cover an app, blocked data-center
+  IPs. Your laptop, for demos.
+- **Beta:** the protocol stays the same and the source behind the server
+  changes. Candidates: **SEC EDGAR** (free, official XBRL "company facts"
+  for every US filer; needs mapping and has no ETF holdings or estimates),
+  and fundamentals vendors such as **Massive**, **Intrinio** or **Financial
+  Modeling Prep**, which add earnings dates, ETF holdings and tidy trailing
+  figures under a business license. Fundamentals are cheap next to OPRA:
+  the data moves slowly, so one fetch a day per symbol, cached, serves
+  everyone.
+
+What the app needs from a vendor is `getCompany(symbol)` returning a
+`CompanySnapshot` (`src/domain/types.ts`): a description and location, the
+trailing-twelve-month figures and the next earnings date for a company, or
+expense ratio, net assets and top holdings for a fund.
+
 ## Questions to ask every vendor
 
 - Can we display your options data in a consumer app? Delayed? Real-time?

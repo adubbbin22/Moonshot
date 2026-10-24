@@ -226,6 +226,79 @@ export interface UnderlyingProfile {
   provenance?: DraftProvenance;
 }
 
+/**
+ * A security's background for digging in before a bet: what the company does
+ * and how it is doing, or what a fund holds. A snapshot labelled with where
+ * and when it came from; never a price feed (prices come from market data).
+ */
+export interface CompanySnapshot {
+  symbol: string;
+  name: string;
+  /** When the figures were observed (ISO). */
+  asOf: string;
+  /** Sample figures are made up for demos and say so on screen. */
+  basis: 'live' | 'sample';
+  /** Where the figures came from, shown to users. */
+  source: string;
+  about: CompanyAbout;
+  /** Operating companies. */
+  financials?: CompanyFinancials;
+  /** Funds: ETFs and commodity trusts. */
+  fund?: FundFacts;
+}
+
+export interface CompanyAbout {
+  /** What the business (or fund) does, in a paragraph. */
+  description: string;
+  sector?: string;
+  industry?: string;
+  /** "City, State" or "City, Country". */
+  headquarters?: string;
+  employees?: number;
+  website?: string;
+}
+
+/** Trailing twelve months unless noted. Money in `currency`; ratios as fractions. */
+export interface CompanyFinancials {
+  currency: string;
+  marketCap?: number;
+  enterpriseValue?: number;
+  revenue?: number;
+  /** Year over year. */
+  revenueGrowth?: number;
+  grossMargin?: number;
+  operatingMargin?: number;
+  profitMargin?: number;
+  netIncome?: number;
+  freeCashFlow?: number;
+  cash?: number;
+  debt?: number;
+  trailingPe?: number;
+  forwardPe?: number;
+  priceToSales?: number;
+  /** Next earnings report (YYYY-MM-DD), and whether the date is still an estimate. */
+  nextEarnings?: string;
+  nextEarningsEstimated?: boolean;
+}
+
+export interface FundHolding {
+  symbol: string;
+  name: string;
+  /** Share of the fund, as a fraction. */
+  weight: number;
+}
+
+export interface FundFacts {
+  family?: string;
+  category?: string;
+  /** Annual expense ratio as a fraction (0.0035 = 0.35%). */
+  expenseRatio?: number;
+  netAssets?: number;
+  /** What the fund holds in one line, for funds of futures or bullion rather than stocks. */
+  holds?: string;
+  topHoldings: FundHolding[];
+}
+
 /** A catalyst on a specific security. */
 export interface CatalystRef {
   symbol: string;

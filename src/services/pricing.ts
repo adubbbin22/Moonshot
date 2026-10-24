@@ -9,6 +9,8 @@ import type { Bet, EventQuestion } from '@/domain/types';
  *
  * When a bet is shown for a question, pass the question: the bet is then
  * priced on an expiration that outlives the question (the horizon guard).
+ * Pass `minExpiration` to price a later expiration than the earliest allowed;
+ * it never pulls the expiration earlier than the guard.
  */
 
 const TTL_MS = 5 * 60 * 1000;
@@ -16,6 +18,8 @@ const cache = new Map<string, { at: number; promise: Promise<PricedStrategy> }>(
 
 export interface PriceOptions {
   question?: EventQuestion;
+  /** YYYY-MM-DD. Price the first listed expiration on or after this date, if it's past the earliest allowed. */
+  minExpiration?: string;
   provider?: MarketDataProvider;
   now?: Date;
 }
@@ -23,7 +27,8 @@ export interface PriceOptions {
 export function priceBet(bet: Bet, options: PriceOptions = {}): Promise<PricedStrategy> {
   const { question, provider = marketData, now = new Date() } = options;
   const { strategy } = bet;
-  const minExpiration = earliestExpiration(strategy.minDays, now, question?.resolution.resolvesOn);
+  const floor = earliestExpiration(strategy.minDays, now, question?.resolution.resolvesOn);
+  const minExpiration = options.minExpiration && options.minExpiration > floor ? options.minExpiration : floor;
 
   const key = `${provider.id}:${bet.id}:${minExpiration}`;
   const hit = cache.get(key);

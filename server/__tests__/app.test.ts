@@ -164,3 +164,46 @@ describe('thesis drafting route', () => {
     server.close();
   });
 });
+
+describe('company information', () => {
+  async function startWith(options: Parameters<typeof createMarketDataServer>[1]) {
+    const server = createMarketDataServer(async () => chain, options);
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    return { server, port: (server.address() as AddressInfo).port };
+  }
+  const snapshot = {
+    symbol: 'NVDA',
+    name: 'NVIDIA',
+    asOf: '2026-10-24T15:00:00.000Z',
+    basis: 'live' as const,
+    source: 'test',
+    about: { description: 'Chips.' },
+  };
+
+  it('serves a snapshot, validates the symbol and reports upstream failures', async () => {
+    const companyFor = jest.fn(async (symbol: string) => {
+      if (symbol === 'BAD') throw new Error('upstream down');
+      return snapshot;
+    });
+    const { server, port } = await startWith({ companyFor });
+    try {
+      const ok = await get(port, '/company/nvda');
+      expect(ok.status).toBe(200);
+      expect(ok.body).toEqual({ company: snapshot });
+      expect(companyFor).toHaveBeenCalledWith('NVDA');
+      expect((await get(port, '/company/not-a-symbol')).status).toBe(400);
+      expect((await get(port, '/company/BAD')).status).toBe(502);
+    } finally {
+      server.close();
+    }
+  });
+
+  it('answers 503 when no source is configured', async () => {
+    const { server, port } = await startWith({});
+    try {
+      expect((await get(port, '/company/NVDA')).status).toBe(503);
+    } finally {
+      server.close();
+    }
+  });
+});

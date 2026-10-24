@@ -45,6 +45,13 @@ own it and what would prove you wrong.
   the gap between the venues (an arbitrage before fees), and how often the
   stock would have to follow the event for the options bet to be fairly
   priced. Sample odds by default; live ones through the demo server.
+- **Dig deeper before you bet:** every bet names its expiration day, what
+  that day means, how it sits against the question's resolution and the
+  next earnings report, and the same bet on later expirations, priced. Every
+  security has company information (what it does, where, how big) and
+  financials (sales and growth, margins, cash and debt, multiples, next
+  earnings), or fund facts for an ETF. Sample figures by default; live ones
+  through the demo server.
 - **Your own belief:** type what you think happens, and a model drafts the
   tree for you to reason through. The model writes the reasoning and picks
   from a curated library of world-to-market mechanisms; it never names a
@@ -121,6 +128,16 @@ it unset for a release.
 and patches the route loader so the folder works from a subpath or a hosted
 page. Serve the folder and open `index.html`.
 
+### Company information and financials
+
+The demo server serves `GET /company/{symbol}` from Yahoo Finance's quote
+summary: the business description, sector, headquarters and headcount,
+trailing sales and growth, margins, cash and debt, valuation multiples and
+the next earnings date, or expense ratio, net assets and top holdings for a
+fund. Start the app with `EXPO_PUBLIC_FUNDAMENTALS=proxy`. Without it, the
+screens show rounded sample figures (`src/data/companySamples.ts`), labelled
+as such. Demo only, like the chains: see [docs/DATA.md](docs/DATA.md).
+
 ### Live prediction-market odds
 
 The demo server fetches Kalshi and Polymarket quotes for the markets listed
@@ -147,7 +164,7 @@ draft so the flow can be demoed offline.
 | ------------------- | ------------------------------------ |
 | `npm start`         | Expo dev server                      |
 | `npm run web`       | Run in the browser                   |
-| `npm run market-data` | Demo server on :8787: market data (Yahoo Finance) and thesis drafting (Claude) |
+| `npm run market-data` | Demo server on :8787: market data and company snapshots (Yahoo Finance), prediction-market odds, thesis drafting (Claude) |
 | `npm run draft-profile -- AMD` | Draft the catalyst map for a symbol with Claude, into `server/drafts/` for review |
 | `node scripts/export-web-hosted.js` | Web build that works from any path (see above) |
 | `npm test`          | Jest unit tests (domain, data, state) |
@@ -172,30 +189,35 @@ src/
     event/[id].tsx     A question: how it resolves, your call, bets for each side
     thesis/[id].tsx    Thesis tree: gut check → break it down → pre-mortem → what follows → bets
     thesis/draft.tsx   Your own belief → a drafted tree
-    stock/[symbol]     The framework for a security: catalyst map, bets, risks
+    stock/[symbol]     The framework for a security: company information and
+                       financials, catalyst map, bets, risks
     simulate.tsx       Monte Carlo of your open bets, market odds vs yours
-    bet/[id].tsx       Bet detail: legs, payoff, market odds, contracts, place (paper)
+    bet/[id].tsx       Bet detail: legs, expiration (and later ones), payoff, market
+                       odds, company at a glance, contracts, place (paper)
   domain/              Pure TypeScript: Black-Scholes and implied odds,
                        option legs and payoffs, strategy pricing and shapes,
                        sizing, calls and take profile, question selector,
                        horizon guard, thesis-tree chain math, catalysts,
-                       returns simulation, prediction-market arbitrage.
+                       returns simulation, prediction-market arbitrage,
+                       expiration facts, reading a company's figures.
                        No React. Fully unit tested.
   data/                Sample questions (with resolution rules), bet
                        templates, underlying profiles (catalyst maps),
                        the mechanism library, thesis trees (+ integrity tests)
   services/            catalog, marketData (synthetic | alpaca | proxy),
-                       predictionMarkets (sample | proxy), pricing cache,
+                       predictionMarkets (sample | proxy), fundamentals
+                       (sample | proxy: company information), pricing cache,
                        broker (paper, multi-leg orders),
                        intelligence/narrator (take profile → plain English),
                        intelligence/thesisDrafter (belief → tree, via the backend)
-  hooks/               usePricedBet(s), useTakeProfile, useNarrative,
-                       useThesisWork, useReasoning
+  hooks/               usePricedBet(s), useExpirations, useCompany, useTakeProfile,
+                       useNarrative, useThesisWork, useReasoning
   state/               App state (React context + reducer)
   components/          UI kit and Moonshot-specific components
   theme/               Design tokens and labels
   test/                Shared test fixtures
-server/                Demo server: Yahoo Finance chains, and thesis drafting with
-                       the Anthropic SDK (draft → review → validate)
+server/                Demo server: Yahoo Finance chains and company snapshots,
+                       prediction-market odds, and thesis drafting with the
+                       Anthropic SDK (draft → review → validate)
 docs/                  Product, data and architecture notes
 ```

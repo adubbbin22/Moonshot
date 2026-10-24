@@ -89,7 +89,8 @@ record are next.
 | Bet ideas | 17 ideas × 3 shapes (capped, aggressive, uncapped), strikes relative to spot, priced against the chain |
 | Simulation | Monte Carlo of open bets at market or your odds; "10 of these" on every bet |
 | Prediction markets | Kalshi and Polymarket odds per question (sample by default, live via the server), venue arbitrage, event-vs-options comparison |
-| Bet screen | Exact legs, payoff diagram, market-odds ladder, contract picker within budget, kill criteria, "your why" |
+| Bet screen | Exact legs, the expiration day explained (standard or not, gap after the question resolves, earnings before it) with later expirations priced, payoff diagram, market-odds ladder, company at a glance, contract picker within budget, kill criteria, "your why" |
+| Company information | What it does, sector, headquarters, headcount; financials (sales and growth, margins, net income, free cash flow, cash and debt, multiples, next earnings) or fund facts (expense ratio, net assets, top holdings). Sample figures by default, live via the server |
 | Portfolio | Total at risk, "if your best one hits", positions with legs, breakeven, thesis |
 | Market data | Synthetic chains (default), Alpaca adapter (dev), backend proxy client. See [DATA.md](DATA.md) |
 | Execution | Paper broker, with multi-leg limit orders modelled |

@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
-import type { ChainSnapshot, PredictionMarketRef, PredictionQuote, ThesisTree, UnderlyingProfile } from '../src/domain/types';
+import type { ChainSnapshot, CompanySnapshot, PredictionMarketRef, PredictionQuote, ThesisTree, UnderlyingProfile } from '../src/domain/types';
 
 /**
  * Minimal demo server speaking the protocols the app's proxy providers
@@ -12,6 +12,7 @@ import type { ChainSnapshot, PredictionMarketRef, PredictionQuote, ThesisTree, U
  *   POST /underlyings/draft  { symbol }                  ->  { profile: UnderlyingProfile }  (same; for editors, see draft-profile.ts)
  *   GET  /odds/{questionId}                              ->  { quotes: PredictionQuote[] }   (when an odds source is configured)
  *   GET  /odds/search?q=…                                ->  { markets: PredictionMarketRef[] }  (editors: find Polymarket slugs)
+ *   GET  /company/{symbol}                               ->  { company: CompanySnapshot }    (when a company source is configured)
  *   GET  /health                                         ->  { ok: true, thesisDrafter: boolean }
  *
  * Chains are cached so a screen full of bets doesn't hammer the upstream.
@@ -22,6 +23,7 @@ export type ThesisDrafter = (belief: string) => Promise<ThesisTree>;
 export type ProfileDrafter = (symbol: string) => Promise<UnderlyingProfile>;
 export type OddsSource = (questionId: string) => Promise<PredictionQuote[] | undefined>;
 export type MarketSearch = (query: string) => Promise<PredictionMarketRef[]>;
+export type CompanySource = (symbol: string) => Promise<CompanySnapshot>;
 
 export interface ServerOptions {
   cacheTtlMs?: number;
@@ -34,6 +36,8 @@ export interface ServerOptions {
   oddsFor?: OddsSource;
   /** Finds prediction markets by text, for editors mapping questions. */
   searchMarkets?: MarketSearch;
+  /** Company information and financials for a symbol. Absent when no source is configured. */
+  companyFor?: CompanySource;
 }
 
 const MAX_BODY_BYTES = 4096;
@@ -74,7 +78,7 @@ function send(res: ServerResponse, status: number, body: unknown) {
 }
 
 export function createMarketDataServer(loadChain: ChainLoader, options: ServerOptions = {}) {
-  const { cacheTtlMs = 5 * 60 * 1000, log = () => {}, draftThesis, draftProfile, oddsFor, searchMarkets } = options;
+  const { cacheTtlMs = 5 * 60 * 1000, log = () => {}, draftThesis, draftProfile, oddsFor, searchMarkets, companyFor } = options;
   const cache = new Map<string, { at: number; promise: Promise<ChainSnapshot> }>();
 
   function cachedChain(underlying: string, minExpiration: string): Promise<ChainSnapshot> {
@@ -145,6 +149,22 @@ export function createMarketDataServer(loadChain: ChainLoader, options: ServerOp
       const quotes = await oddsFor(decodeURIComponent(odds[1]));
       if (!quotes) return send(res, 404, { error: 'Unknown question' });
       return send(res, 200, { quotes });
+    }
+
+    const company = /^\/company\/([^/]+)$/.exec(url.pathname);
+    if (company) {
+      if (!companyFor) return send(res, 503, { error: 'Company information is not configured on this server.' });
+      const symbol = decodeURIComponent(company[1]).toUpperCase();
+      if (!SYMBOL.test(symbol)) return send(res, 400, { error: 'Expected /company/{SYMBOL}' });
+      try {
+        const snapshot = await companyFor(symbol);
+        log(`${symbol} company snapshot`);
+        return send(res, 200, { company: snapshot });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log(`${symbol} company failed: ${message}`);
+        return send(res, 502, { error: message });
+      }
     }
 
     const match = /^\/chains\/([^/]+)$/.exec(url.pathname);

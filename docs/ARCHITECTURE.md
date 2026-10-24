@@ -75,6 +75,24 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
   and `eventVsOptions` turns the pair of event odds and options odds into
   the link the options price assumes: how often the stock must follow the
   event. The two claims are kept apart in the copy.
+- **Expiration day** (`domain/expiry.ts`, `hooks/useExpirations`,
+  `components/ExpirationPicker.tsx`): the bet screen spells out the contract's
+  expiration (standard monthly or not, days away, the gap after the question
+  resolves, whether the next earnings report lands before it) and offers the
+  same bet on later expirations. `services/pricing.ts` takes a
+  `minExpiration` that can only push the date later than the horizon guard;
+  the hook asks for the next listed expiration and two further out
+  (`laterExpirationFloors`), each priced in full, and the chosen one flows
+  through sizing, the outcome ladder and the order unchanged.
+- **Company information and financials** (`services/fundamentals/`,
+  `hooks/useCompany`, `components/stock/CompanyFacts.tsx` and
+  `CompanyGlance.tsx`): a `CompanySnapshot` per symbol, with `about`,
+  `financials` (operating companies) or `fund` (ETFs and commodity trusts),
+  labelled with its source, date and basis. `sample` serves
+  `data/companySamples.ts` (rounded, made-up, says so on screen); `proxy`
+  asks our backend. `domain/fundamentals.ts` turns the figures into a few
+  plain-English notes (pre-revenue, runway, net cash, priced for growth).
+  Never a price feed: prices still only come from `services/marketData/`.
 - **Bets are templates, not trades.** `data/bets.ts` stores strikes relative
   to spot (e.g. buy 1.30×, sell 1.33×) and a minimum days-to-expiry. Each time
   a bet is shown, it's priced against today's chain, so the catalog never
@@ -113,6 +131,10 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
   `GET /odds/{questionId}` for the markets listed on a question, plus
   `GET /odds/search?q=` to help editors find Polymarket slugs. Written
   against the venues' documented responses and tested with fixtures.
+- **`server/fundamentals.ts`** maps Yahoo Finance's quote summary (profile,
+  financial data, key statistics, calendar, fund profile, top holdings) to a
+  `CompanySnapshot`, treats Yahoo's zeros as unknown, caches for an hour, and
+  serves `GET /company/{symbol}`. Demo only, like the chains.
 - **`server/profile.ts`** drafts the framework for a symbol with the same
   SDK: one structured-output call, `validateProfileDraft` (no numbers, no
   advice, both directions, real questions), one retry. `npm run

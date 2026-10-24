@@ -1,17 +1,21 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
+import { ExpirationPicker } from '@/components/ExpirationPicker';
 import { OutcomeLadder } from '@/components/OutcomeLadder';
 import { PayoffDiagram } from '@/components/PayoffDiagram';
 import { RepeatBetCard } from '@/components/RepeatBetCard';
 import { ShapeLadder } from '@/components/ShapeLadder';
+import { CompanyGlance } from '@/components/stock/CompanyGlance';
 import { WhatMovesIt } from '@/components/stock/WhatMovesIt';
 import { ReasoningCard } from '@/components/thesis/ReasoningCard';
 import { Button, Card, Chip, Screen, Stat, StatRow, Text } from '@/components/ui';
 import { contractOptions, maxStakePerBet, stakeCeiling } from '@/domain/sizing';
 import { impliedOdds, isAsymmetric, MIN_PAYOFF_MULTIPLE, type PricedStrategy } from '@/domain/strategy';
-import type { Bet, PositionSource, Side } from '@/domain/types';
+import type { Bet, EventQuestion, PositionSource, Side } from '@/domain/types';
+import { useCompany } from '@/hooks/useCompany';
+import { useExpirations, type ExpirationsState } from '@/hooks/useExpirations';
 import { usePricedBet } from '@/hooks/usePricedBet';
 import { useReasoning } from '@/hooks/useReasoning';
 import { formatDate, formatMoney, formatPercent, formatPrice } from '@/lib/format';
@@ -45,6 +49,12 @@ export default function BetScreen() {
   const bet = catalog.getBet(params.id);
   const question = params.eventId ? catalog.getEvent(params.eventId) : undefined;
   const pricing = usePricedBet(bet, question);
+  const company = useCompany(bet?.strategy.underlying);
+  const [expiration, setExpiration] = useState<string | undefined>();
+  const expirations = useExpirations(bet, question, pricing.status === 'ready' ? pricing.priced : undefined);
+  // The bet as priced on the expiration the user picked, else on the default one.
+  const priced =
+    expirations.options.find((p) => p.expiration === expiration) ?? (pricing.status === 'ready' ? pricing.priced : undefined);
   const reasoning = useReasoning(params.id, params.thesisId, params.stepId);
   const call = useAppState().calls.find((c) => c.questionId === params.eventId);
   // The user's own chance this bet pays: their chain through a thesis, or their call on the question.
@@ -91,22 +101,22 @@ export default function BetScreen() {
   return (
     <Screen edges={['bottom']}>
       <View style={styles.header}>
-        <Text variant="caption" tone="faint">
-          {bet.strategy.underlyingName} ({bet.strategy.underlying}) · {STRUCTURE_LABELS[bet.strategy.kind]}
-        </Text>
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => router.push({ pathname: '/stock/[symbol]', params: { symbol: bet.strategy.underlying } })}>
+          <Text variant="caption" tone="faint">
+            {bet.strategy.underlyingName} ({bet.strategy.underlying}) · {STRUCTURE_LABELS[bet.strategy.kind]} ›
+          </Text>
+        </Pressable>
         <Text variant="title">{bet.title}</Text>
         <Text tone="muted">{bet.pitch}</Text>
       </View>
 
-      {reasoning ? (
-        <ReasoningCard
-          reasoning={reasoning}
-          marketOdds={pricing.status === 'ready' ? impliedOdds(pricing.priced).value : undefined}
-        />
-      ) : null}
+      {reasoning ? <ReasoningCard reasoning={reasoning} marketOdds={priced ? impliedOdds(priced).value : undefined} /> : null}
 
       <ShapeLadder bet={bet} question={question} params={params} />
       <WhatMovesIt bet={bet} />
+      <CompanyGlance symbol={bet.strategy.underlying} state={company} />
 
       {pricing.status === 'loading' ? (
         <Card style={styles.center}>
@@ -127,10 +137,14 @@ export default function BetScreen() {
         </Card>
       ) : null}
 
-      {pricing.status === 'ready' ? (
+      {priced ? (
         <PricedBet
           bet={bet}
-          priced={pricing.priced}
+          priced={priced}
+          question={question}
+          expirations={expirations}
+          onSelectExpiration={setExpiration}
+          nextEarnings={company.status === 'ready' ? company.company?.financials?.nextEarnings : undefined}
           params={params}
           reasoningText={reasoning?.text}
           killCriteria={reasoning?.killCriteria}
@@ -146,6 +160,10 @@ export default function BetScreen() {
 function PricedBet({
   bet,
   priced,
+  question,
+  expirations,
+  onSelectExpiration,
+  nextEarnings,
   params,
   reasoningText,
   killCriteria,
@@ -155,6 +173,12 @@ function PricedBet({
 }: {
   bet: Bet;
   priced: PricedStrategy;
+  question?: EventQuestion;
+  /** The same bet on the expirations it can be taken at. */
+  expirations: ExpirationsState;
+  onSelectExpiration: (expiration: string) => void;
+  /** The company's next earnings date, when known, to place against the expiration. */
+  nextEarnings?: string;
   params: Params;
   /** The user's chain as a sentence, offered as a starting point for their why. */
   reasoningText?: string;
@@ -206,12 +230,21 @@ function PricedBet({
           </View>
         ))}
         <Text variant="caption" tone="faint">
-          {STRUCTURE_EXPLAINERS[priced.kind]} Expires {formatDate(priced.expiration)} ({priced.daysToExpiry} days).
+          {STRUCTURE_EXPLAINERS[priced.kind]}
         </Text>
         <Text variant="caption" tone="faint">
           Prices: {priced.source ?? marketData.label} · mid prices · as of {new Date(priced.asOf).toLocaleString()}
         </Text>
       </Card>
+
+      <ExpirationPicker
+        priced={priced}
+        options={expirations.options}
+        loading={expirations.loading}
+        onSelect={onSelectExpiration}
+        resolvesOn={question?.resolution.resolvesOn}
+        nextEarnings={nextEarnings}
+      />
 
       <Card>
         <StatRow>

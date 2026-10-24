@@ -39,6 +39,15 @@ describe('priceBet', () => {
     expect(priced.expiration).toBe('2027-08-20');
   });
 
+  it('prices a later expiration on request, never an earlier one', async () => {
+    const { provider, requests } = spyProvider();
+    const later = await priceBet(tanker, { provider, now, question: hormuz, minExpiration: '2027-08-21' });
+    expect(later.expiration).toBe('2027-09-17');
+    const clamped = await priceBet(tanker, { provider, now, question: hormuz, minExpiration: '2027-01-01' });
+    expect(clamped.expiration).toBe('2027-08-20');
+    expect(requests).toEqual(['2027-08-21', '2027-07-30']);
+  });
+
   it('caches per bet and horizon', async () => {
     const { provider, requests } = spyProvider();
     await priceBet(tanker, { provider, now, question: hormuz });

@@ -588,6 +588,10 @@ likely with NFA registration, and no sports, elections or war.
   often the stock must follow the event for the options price to be fair.
   Sample odds in the prototype; live quotes through the server for mapped
   markets.
+- Digging deeper before a bet: the expiration day explained and later
+  expirations priced side by side; company information and financials (or
+  fund facts) on the stock screen and at a glance on the bet screen.
+  Sample figures in the prototype; live ones through the server.
 - Copy fixes: "Wrong: lose what you paid", "Expect most to expire worthless.
   Size them so that's fine."
 

@@ -1,4 +1,5 @@
 import { BETS } from '../bets';
+import { COMPANY_SAMPLES } from '../companySamples';
 import { DEMO_TOPICS, demoCalls } from '../demoCalls';
 import { EVENTS } from '../events';
 import { MECHANISMS } from '../mechanisms';
@@ -274,5 +275,39 @@ describe('demo calls', () => {
   it('cover the topics they claim to', () => {
     const covered = new Set(calls.map((c) => questions.get(c.questionId)?.category));
     expect(DEMO_TOPICS.every((t) => covered.has(t))).toBe(true);
+  });
+});
+
+describe('company samples', () => {
+  it.each(UNDERLYINGS.map((u) => [u.symbol, u] as const))('%s has a sample that matches its kind', (symbol, profile) => {
+    const sample = COMPANY_SAMPLES[symbol];
+    expect(sample).toBeDefined();
+    expect(sample.about.description.length).toBeGreaterThan(40);
+    if (profile.kind === 'stock') {
+      expect(sample.financials).toBeDefined();
+      expect(sample.fund).toBeUndefined();
+    } else {
+      expect(sample.fund).toBeDefined();
+      expect(sample.financials).toBeUndefined();
+    }
+    const f = sample.financials;
+    if (f) {
+      for (const margin of [f.grossMargin, f.operatingMargin, f.profitMargin]) {
+        if (margin !== undefined) {
+          expect(margin).toBeGreaterThan(-5);
+          expect(margin).toBeLessThanOrEqual(1);
+        }
+      }
+      if (f.nextEarnings) expect(f.nextEarnings).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+    const fund = sample.fund;
+    if (fund) {
+      expect(fund.topHoldings.reduce((sum, h) => sum + h.weight, 0)).toBeLessThanOrEqual(1);
+      if (fund.topHoldings.length === 0) expect(fund.holds).toBeDefined();
+    }
+  });
+
+  it('only describe underlyings in the library', () => {
+    expect(Object.keys(COMPANY_SAMPLES).filter((s) => !underlyingsBySymbol.has(s))).toEqual([]);
   });
 });

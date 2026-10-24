@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { BetExpressions } from '@/components/BetExpressions';
+import { CompanyFacts } from '@/components/stock/CompanyFacts';
 import { Card, Chip, Screen, Text } from '@/components/ui';
 import { betsExpressing } from '@/domain/catalysts';
 import type { Catalyst, CatalystKind, CatalystTiming, Direction } from '@/domain/types';
@@ -66,6 +67,7 @@ export default function StockScreen() {
         </Text>
         <Text>{profile.movesOn}</Text>
       </Card>
+      <CompanyFacts symbol={profile.symbol} />
       {profile.provenance ? (
         <Card style={styles.drafted}>
           <Text variant="label" tone="muted">
