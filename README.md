@@ -1,14 +1,15 @@
 # Moonshot
 
-A consumer app for small, thesis-driven, **asymmetric** stock bets.
+A consumer app for small, thesis-driven, **asymmetric options bets**.
 
 Index-fund apps are built to make you average. Moonshot is the other end of the
-barbell: you put small, fixed amounts into bets where being wrong costs a little
-and being right pays a lot. Every bet starts from a view about the world, so you
-always know why you own it and what would prove you wrong.
+barbell. You put small, fixed amounts into long options and debit spreads,
+where what you pay is the most you can lose and being right pays several times
+over. Every bet starts from a view about the world, so you always know why you
+own it and what would prove you wrong.
 
-> **Prototype.** Bets are simulated (paper trading), all content is sample data,
-> and nothing in the app is investment advice.
+> **Prototype.** Trades are simulated (paper trading), prices are synthetic by
+> default, and nothing in the app is investment advice.
 
 ## The two ways in
 
@@ -19,15 +20,19 @@ always know why you own it and what would prove you wrong.
   answer three prompts, and get a plain-English thesis plus the bets that follow
   from it.
 
-Both lead to the same **bet screen**. It shows the worst case (your stake), the
-best case, the odds of losing, and what your stake turns into in each scenario.
-It also lists what has to be true for the bet to work and how you'll know
-you're wrong. You pick a small amount from your monthly budget and write down
-your "why".
+Both lead to the same **bet screen**. It shows the exact trade (e.g. "Buy the
+NVDA $235 call, sell the $240 call, Jan 2028") priced from the option chain,
+plus the cost (your max loss), the max payout and a payoff diagram. It also
+shows the odds of each outcome implied by today's option prices. You pick how
+many contracts fit your monthly budget and write down your "why".
 
-See [docs/PRODUCT.md](docs/PRODUCT.md) for the product principles and open
-questions, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the code is
-organized and what the backend will need.
+Docs:
+- [docs/PRODUCT.md](docs/PRODUCT.md): principles, which option structures
+  are allowed and why, and open questions.
+- [docs/DATA.md](docs/DATA.md): **where real options data comes from**:
+  vendors, OPRA licensing, costs and the recommended path.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): code layout and what the
+  backend will need.
 
 ## Run it
 
@@ -40,6 +45,11 @@ npx expo start        # then press i (iOS simulator), a (Android) or w (web)
 
 On a phone, install **Expo Go** and scan the QR code. Every native module
 used here ships in Expo Go, so you don't need a custom build yet.
+
+Prices are synthetic by default. To use real (delayed/indicative) chains from
+your own free Alpaca account in a dev build, copy `.env.example` to
+`.env.local` and set `EXPO_PUBLIC_MARKET_DATA=alpaca` with your keys. Read
+[docs/DATA.md](docs/DATA.md) first: that path is for local development only.
 
 | Script              | What it does                         |
 | ------------------- | ------------------------------------ |
@@ -64,13 +74,17 @@ src/
     (tabs)/            Feed · Theses · Bets (portfolio) · You (profile)
     event/[id].tsx     A feed question: pick a side, see bets
     thesis/[themeId]   Guided thesis builder → thesis → matched bets
-    bet/[id].tsx       Bet detail: payoff, stake, "your why", place (paper)
-  domain/              Pure TypeScript: types, payoff math, sizing rules,
+    bet/[id].tsx       Bet detail: legs, payoff, market odds, contracts, place (paper)
+  domain/              Pure TypeScript: Black-Scholes and implied odds,
+                       option legs and payoffs, strategy pricing, sizing,
                        thesis engine. No React. Fully unit tested.
-  data/                Sample bets, events and themes (+ integrity tests)
-  services/            catalog (content) and broker (order execution) seams
+  data/                Sample bet templates, events, themes (+ integrity tests)
+  services/            catalog, marketData (synthetic | alpaca | proxy),
+                       pricing cache, broker (paper, multi-leg orders)
+  hooks/               usePricedBet
   state/               App state (React context + reducer)
   components/          UI kit and Moonshot-specific components
-  theme/               Design tokens
+  theme/               Design tokens and labels
+  test/                Shared test fixtures
 docs/                  Product and architecture notes
 ```

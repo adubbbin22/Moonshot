@@ -42,8 +42,9 @@ Docs: https://docs.expo.dev/eas/index.md
 
 ## Moonshot specifics
 
-- Product principles and open questions: `docs/PRODUCT.md`. Code layout and backend plan: `docs/ARCHITECTURE.md`.
-- Every bet must have a capped downside (long-only, no leverage). Keep that invariant in `src/domain/` and its tests.
+- Product principles: `docs/PRODUCT.md`. Market data sourcing and licensing: `docs/DATA.md`. Code layout and backend plan: `docs/ARCHITECTURE.md`.
+- Every bet is a long option or a debit spread: defined risk, at least 3x payoff. `validateStructure` and `isAsymmetric` enforce this; keep them tested.
+- Prices only come through `src/services/marketData/` (see `docs/DATA.md`). Never ship vendor API keys in the app bundle.
 - Business rules live in `src/domain/` (pure TS, unit tested); screens stay thin.
 - Content reads go through `src/services/catalog.ts`; orders go through the `Broker` interface in `src/services/broker.ts`.
 - Sample content lives in `src/data/`; `src/data/__tests__/integrity.test.ts` must pass after any content change.

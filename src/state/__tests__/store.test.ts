@@ -1,34 +1,26 @@
 import { initialState, reducer } from '../store';
-import type { Position } from '@/domain/types';
+import { makePosition } from '@/test/fixtures';
 
-const position: Position = {
-  id: 'p1',
-  betId: 'ai-compute-calls',
-  stake: 25,
-  placedAt: '2026-10-23T00:00:00.000Z',
-  thesis: 'Compute demand keeps compounding.',
-  source: { type: 'event', eventId: 'ai-week-long-task-2027', side: 'yes' },
-  status: 'open',
-};
+const position = makePosition({ source: { type: 'event', eventId: 'ai-week-long-task-2027', side: 'yes' } });
 
 describe('reducer', () => {
   it('starts un-onboarded with a default budget', () => {
     expect(initialState.profile).toEqual({
       onboarded: false,
-      monthlyBudget: 100,
-      maxPerBetPct: 0.25,
+      monthlyBudget: 500,
+      maxPerBetPct: 0.3,
     });
   });
 
   it('completes onboarding with the chosen budget and disclaimer timestamp', () => {
     const state = reducer(initialState, {
       type: 'completeOnboarding',
-      monthlyBudget: 50,
+      monthlyBudget: 250,
       acceptedAt: '2026-10-23T00:00:00.000Z',
     });
     expect(state.profile).toMatchObject({
       onboarded: true,
-      monthlyBudget: 50,
+      monthlyBudget: 250,
       acceptedDisclaimerAt: '2026-10-23T00:00:00.000Z',
     });
   });

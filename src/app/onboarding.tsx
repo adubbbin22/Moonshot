@@ -6,21 +6,29 @@ import { DISCLAIMER } from '@/components/Disclaimer';
 import { Button, Chip, Screen, Text } from '@/components/ui';
 import { barbellSplit, BUDGET_OPTIONS } from '@/domain/sizing';
 import { formatMoney } from '@/lib/format';
-import { useAppDispatch } from '@/state/store';
+import { initialState, useAppDispatch } from '@/state/store';
 import { colors, radius, spacing } from '@/theme/tokens';
 
 const STEPS = ['intro', 'how', 'budget', 'terms'] as const;
 
 const HOW_IT_WORKS = [
   { n: '1', title: 'Pick a belief', body: 'Answer a question about the world, or build a thesis.' },
-  { n: '2', title: 'Get an asymmetric bet', body: 'We show bets where being right pays far more than being wrong costs.' },
-  { n: '3', title: 'Bet small', body: 'Fixed amounts from a monthly budget. The most you can lose is what you put in.' },
+  {
+    n: '2',
+    title: 'Get an options bet',
+    body: 'A call, put or spread built from live prices. You see the cost, the max payout and the market’s odds before you buy.',
+  },
+  {
+    n: '3',
+    title: 'Bet small',
+    body: 'Whole contracts from a monthly budget. What you pay up front is the most you can lose.',
+  },
 ];
 
 export default function OnboardingScreen() {
   const dispatch = useAppDispatch();
   const [step, setStep] = useState(0);
-  const [budget, setBudget] = useState(100);
+  const [budget, setBudget] = useState(initialState.profile.monthlyBudget);
   const [accepted, setAccepted] = useState(false);
 
   const current = STEPS[step];
@@ -51,8 +59,8 @@ export default function OnboardingScreen() {
           </Text>
           <ConvexityCurve />
           <Text tone="muted">
-            Small bets with a capped downside and a big upside, each one tied to a view about where
-            the world is going.
+            Small options bets: you pay once, that’s the most you can lose, and being right can pay
+            several times over. Each one is tied to a view about where the world is going.
           </Text>
         </View>
       ) : null}
@@ -81,7 +89,8 @@ export default function OnboardingScreen() {
           <Text variant="title">Set your moonshot budget</Text>
           <Text tone="muted">
             How much could you lose each month without it changing your life? That’s your budget.
-            Most of these bets will go to zero. A few might not.
+            Options trade in contracts of 100 shares, so one bet usually costs $50–$250. Most will
+            expire worthless. A few might not.
           </Text>
           <View style={styles.chips}>
             {BUDGET_OPTIONS.map((amount) => (

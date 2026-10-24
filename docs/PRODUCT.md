@@ -6,80 +6,113 @@ Passive index investing is the right default for most of your money. Moonshot
 is for the slice you can afford to lose. It borrows from two places:
 
 - **Taleb's barbell and convexity.** Keep most of your money very safe. Put a
-  small amount into bets with a capped downside and an open-ended upside. You
-  want exposure to positive surprises without being exposed to ruin.
+  small amount into bets with a capped downside and a large upside. You want
+  exposure to positive surprises without being exposed to ruin.
 - **Venture capital's power law.** Most bets go to zero. The portfolio works
   because one or two winners return many times the total stake. Size every bet
   so losing it doesn't matter and winning it does.
 
 The product's job is to turn "I think X is going to happen" into a small,
-well-shaped bet. It should also make you write down why, and later check
-whether you were right.
+well-shaped **options** bet. It should also make you write down why, and later
+check whether you were right.
+
+## Why options, and which ones
+
+Options are the natural instrument for asymmetry: you pay a premium once,
+that's the most you can lose, and the payoff can be many times the premium.
+Moonshot only uses structures where that holds:
+
+| Structure | View | Max loss | Max gain | Why it's in |
+| --- | --- | --- | --- | --- |
+| Long call | Up | Premium | Uncapped | Purest convexity, but often expensive |
+| Long put | Down | Premium | Strike − premium | Bearish convexity |
+| Call debit spread | Up | Net debit | Width − debit | Much cheaper; capped upside |
+| Put debit spread | Down | Net debit | Width − debit | Same, bearish |
+
+**Excluded on purpose:** credit spreads, naked short options, iron condors
+and covered calls. They all collect premium and risk more than they can make:
+the opposite payoff shape. `validateStructure` in `src/domain/options.ts`
+rejects anything that isn't a debit with defined risk.
+
+Two consequences shape the product:
+
+- **Spreads cap the upside.** The principle becomes "defined risk,
+  asymmetric reward" rather than "unlimited upside". Moonshot requires every
+  bet to be able to return **at least 3x its cost** (`MIN_PAYOFF_MULTIPLE`).
+- **Narrow spreads act like binary bets.** A $5-wide call spread costing $1.20
+  pays $5 if the stock ends above the upper strike and roughly nothing below
+  the lower one. Its price divided by its width is close to the market's
+  implied probability. That maps neatly onto feed questions ("Will X
+  happen?") and makes the odds honest: they come from the market, not from us.
 
 ## Principles
 
-1. **Capped downside, always.** Long-only instruments. No leverage, margin or
-   shorting. The most you can lose is the amount you put in, and the UI says so
-   on every bet.
-2. **Asymmetry is the filter.** We only surface bets where the best case is a
-   large multiple of the stake. "Chance of loss" is shown openly, and it's
-   usually above 50%.
-3. **Thesis first.** Every bet is reached through a belief about the world,
+1. **Defined risk, always.** Long options and debit spreads only. No margin.
+   What you pay up front is the most you can lose, and the UI says so on
+   every bet.
+2. **Asymmetry is the filter.** Every bet must be able to pay at least 3x its
+   cost at today's prices. If live prices break that, the bet is flagged.
+3. **Market odds, not opinions.** Every bet shows the odds implied by option
+   prices for each outcome range: lose it all, get some back, profit, max
+   payout. They're risk-neutral and labelled as what the market is pricing.
+4. **Thesis first.** Every bet is reached through a belief about the world,
    either a feed question or a guided thesis. Each bet lists what has to be
    true and the signals that would mean you're wrong.
-4. **Small stakes, many shots.** Users set a monthly moonshot budget. Each bet
-   is capped at a share of it (25% today), so the app pushes toward several
-   small bets rather than one big one.
-5. **Honest framing.** Odds are labelled as illustrative estimates. The
-   portfolio screen says "Expect most to go to zero." No confetti for placing
-   bets.
+5. **Small stakes, many shots.** Users set a monthly moonshot budget, and each
+   bet is capped at 30% of it. Options trade in whole 100-share contracts, so
+   bet ideas are built to cost roughly $50–$200 per contract.
+6. **Honest framing.** "Expect most to expire worthless." No confetti.
 
 ## Core loop
 
 ```
-Belief ──► Bet ──► Journal ──► Resolution ──► Better beliefs
-(feed or    (small,   ("your why",   (question resolves,   (track record:
- thesis)    capped)   kill criteria)  horizon reached)      where were you right?)
+Belief ──► Bet ──► Journal ──► Expiry / resolution ──► Better beliefs
+(feed or    (option   ("your why",   (spread settles,          (track record:
+ thesis)    or spread) kill criteria) question resolves)        where were you right?)
 ```
 
-The scaffold covers belief → bet → journal. Resolution and the track record
-are the next big product surface (see open questions).
+The scaffold covers belief → bet → journal. Settling at expiry and the track
+record are next.
 
 ## What's in the scaffold
 
-| Area        | Status                                                          |
-| ----------- | --------------------------------------------------------------- |
-| Onboarding  | Philosophy, how it works, budget picker, disclaimer acceptance  |
-| Feed        | 5 sample event questions with crowd split and yes/no entry      |
-| Event       | Toggle sides, rationale, linked bets, "no bet" sides            |
-| Thesis      | 4 themes × 2–3 questions → generated thesis → ranked bets       |
-| Bet         | Stake chips (budget-aware), outcome chart, kill criteria, "why" |
-| Portfolio   | Total at risk, "if your best one hits", positions with thesis   |
-| Profile     | Budget setting, principles, convexity curve, reset              |
-| Execution   | Paper broker only                                               |
-| Persistence | In memory (resets on reload)                                    |
+| Area | Status |
+| --- | --- |
+| Onboarding | Philosophy, how it works, budget picker ($100–$1,000/mo), disclaimer |
+| Feed | 5 sample event questions; each linked bet shows live cost, max payout and market odds |
+| Thesis | 4 themes × 2–3 questions → generated thesis → matched bets |
+| Bet ideas | 17 strategy templates (strikes relative to spot, minimum days to expiry) priced against the chain |
+| Bet screen | Exact legs, payoff diagram, market-odds ladder, contract picker within budget, kill criteria, "your why" |
+| Portfolio | Total at risk, "if your best one hits", positions with legs, breakeven, thesis |
+| Market data | Synthetic chains (default), Alpaca adapter (dev), backend proxy client. See [DATA.md](DATA.md) |
+| Execution | Paper broker, with multi-leg limit orders modelled |
+| Persistence | In memory (resets on reload) |
 
 ## Open questions
 
-- **Instruments.** Long-dated call options are the purest asymmetric
-  instrument, but they're complex for beginners and need options approval.
-  Alternatives include small-cap or thematic stocks and ETFs (lower ceiling,
-  no expiry), defined-outcome products, or an abstraction that packages
-  options as a simple "bet" with a fixed cost and expiry.
-- **Where the odds come from.** Today they're hand-written. Options-implied
-  probabilities are a natural, market-based source. Analyst or model
-  estimates are another. Whatever we use, it has to be explainable.
-- **Generating the feed.** Questions should come from the news, but each one
-  needs a clear resolution criterion and a defensible mapping to instruments.
-  An LLM can draft them; a human should approve them.
-- **Resolution and track record.** When a question resolves, show the user
-  how their call and their bet did. Over time this becomes a calibration
-  score, which is arguably the most valuable thing the app can teach.
-- **Social.** Crowd split is shown today. Following other people's theses or
-  posting your own call publicly could drive growth, and also herding.
+- **Contract minimums vs. "small amounts".** One contract is the minimum,
+  which for most names means $50–$200. Options: lean on narrow spreads and
+  cheaper underlyings, raise the default budget, or pool users into
+  fractional exposure. Pooling is a much heavier regulatory lift.
+- **Closing early and expiry handling.** Users will want to take profits
+  before expiry. Spreads with a short leg in the money at expiry carry
+  assignment and pin risk, so Moonshot should auto-close spreads before
+  expiry rather than let them exercise.
+- **Options approval friction.** Spreads need Level 3 approval at Alpaca.
+  Onboarding has to collect experience, income and objectives, and some users
+  will only get Level 2 (long options). The bet catalog should adapt to the
+  user's approved level.
+- **Resolution and track record.** When a question resolves or a spread
+  expires, show how the call and the bet did. Over time this becomes a
+  calibration score: arguably the most valuable thing the app teaches.
+- **Generating the feed.** Questions should come from the news, each with a
+  clear resolution criterion and a defensible mapping to a structure. An LLM
+  can draft them; a human approves them.
 - **Business model.** Subscription is cleanest. Payment for order flow
-  conflicts with the "fewer, better bets" principle.
+  conflicts with "fewer, better bets", and options order flow is where that
+  conflict is sharpest.
 - **Regulation.** Matching bets to a user's stated beliefs may count as
-  personalized investment advice. Options access carries suitability
-  requirements, and engagement features get scrutiny. This needs counsel
-  before any real money moves (see ARCHITECTURE.md).
+  personalized advice. Options have specific suitability and disclosure rules
+  (FINRA 2360, the options disclosure document), and engagement features get
+  scrutiny. This needs counsel before any real money moves (see
+  ARCHITECTURE.md).

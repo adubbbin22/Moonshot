@@ -7,7 +7,9 @@ import {
   type ReactNode,
 } from 'react';
 
+import { CONTRACT_MULTIPLIER, isBullish } from '@/domain/options';
 import { checkStake } from '@/domain/sizing';
+import type { PricedStrategy } from '@/domain/strategy';
 import type { Position, PositionSource, Profile, SavedThesis } from '@/domain/types';
 import { createId, paperBroker, type Broker } from '@/services/broker';
 
@@ -32,7 +34,7 @@ export type Action =
   | { type: 'reset' };
 
 export const initialState: AppState = {
-  profile: { onboarded: false, monthlyBudget: 100, maxPerBetPct: 0.25 },
+  profile: { onboarded: false, monthlyBudget: 500, maxPerBetPct: 0.3 },
   positions: [],
   theses: [],
 };
@@ -86,33 +88,47 @@ export function useAppDispatch(): Dispatch<Action> {
 
 export interface PlaceBetInput {
   betId: string;
-  stake: number;
+  priced: PricedStrategy;
+  contracts: number;
   thesis: string;
   source: PositionSource;
 }
 
 export type PlaceBetResult = { ok: true; position: Position } | { ok: false; reason: string };
 
-/** Validates a stake against the user's budget, sends it to the broker and records it. */
+/** Validates the cost against the user's budget, sends a limit order to the broker and records it. */
 export function usePlaceBet(broker: Broker = paperBroker) {
   const { profile, positions } = useAppState();
   const dispatch = useAppDispatch();
 
   return useCallback(
-    async (input: PlaceBetInput): Promise<PlaceBetResult> => {
-      const check = checkStake(input.stake, profile, positions, new Date());
+    async ({ betId, priced, contracts, thesis, source }: PlaceBetInput): Promise<PlaceBetResult> => {
+      const check = checkStake(priced.costPerContract * contracts, profile, positions, new Date());
       if (!check.ok) return check;
 
-      const result = await broker.placeOrder({ betId: input.betId, stake: input.stake });
+      const result = await broker.placeOrder({
+        betId,
+        contracts,
+        limitDebit: priced.debit,
+        legs: priced.legs.map((l) => ({ symbol: l.symbol, action: l.action, ratio: 1 })),
+      });
       if (result.status === 'rejected') return { ok: false, reason: result.reason };
 
+      const buyStrike = priced.legs.find((l) => l.action === 'buy')!.strike;
       const position: Position = {
         id: result.orderId,
-        betId: input.betId,
-        stake: input.stake,
+        betId,
+        underlying: priced.underlying,
+        kind: priced.kind,
+        expiration: priced.expiration,
+        legs: priced.legs.map(({ action, type, strike, symbol }) => ({ action, type, strike, symbol })),
+        contracts,
+        costPerContract: result.fillDebit * CONTRACT_MULTIPLIER,
+        maxValuePerContract: priced.maxValuePerContract,
+        breakeven: isBullish(priced.kind) ? buyStrike + result.fillDebit : buyStrike - result.fillDebit,
         placedAt: result.filledAt,
-        thesis: input.thesis.trim(),
-        source: input.source,
+        thesis: thesis.trim(),
+        source,
         status: 'open',
       };
       dispatch({ type: 'addPosition', position });

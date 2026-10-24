@@ -1,4 +1,3 @@
-import { asymmetryRatio } from './payoff';
 import type { Bet, Theme, ThesisOption } from './types';
 
 /** Maps step id -> chosen option id. */
@@ -37,7 +36,7 @@ export interface BetMatch {
 }
 
 /**
- * Ranks bets by how many thesis tags they share, breaking ties by asymmetry.
+ * Ranks bets by how many thesis tags they share; ties keep catalog order.
  * Bets that share no tags are dropped: we only show bets that follow from
  * what the user said they believe.
  */
@@ -46,9 +45,6 @@ export function matchBets(tags: string[], bets: Bet[], limit = 3): BetMatch[] {
   return bets
     .map((bet) => ({ bet, score: bet.tags.filter((t) => wanted.has(t)).length }))
     .filter((m) => m.score > 0)
-    .sort(
-      (a, b) =>
-        b.score - a.score || asymmetryRatio(b.bet.scenarios) - asymmetryRatio(a.bet.scenarios),
-    )
+    .sort((a, b) => b.score - a.score)
     .slice(0, limit);
 }

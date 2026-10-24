@@ -1,81 +1,78 @@
 import {
   barbellSplit,
   checkStake,
+  contractOptions,
   maxStakePerBet,
+  MAX_CONTRACTS,
   remainingBudget,
-  stakeOptions,
 } from '../sizing';
-import type { Position, Profile } from '../types';
+import type { Profile } from '../types';
+import { makePosition } from '@/test/fixtures';
 
-const profile: Profile = { onboarded: true, monthlyBudget: 100, maxPerBetPct: 0.25 };
+const profile: Profile = { onboarded: true, monthlyBudget: 500, maxPerBetPct: 0.3 };
 const now = new Date('2026-10-23T12:00:00.000Z');
 
-function position(stake: number, placedAt: string): Position {
-  return {
-    id: `${stake}-${placedAt}`,
-    betId: 'x',
-    stake,
-    placedAt,
-    thesis: '',
-    source: { type: 'direct' },
-    status: 'open',
-  };
-}
+const spent = (cost: number, placedAt: string) =>
+  makePosition({ id: `${cost}-${placedAt}`, costPerContract: cost, contracts: 1, placedAt });
 
 describe('budget', () => {
   it('derives the per-bet cap from the monthly budget', () => {
-    expect(maxStakePerBet(profile)).toBe(25);
+    expect(maxStakePerBet(profile)).toBe(150);
   });
 
-  it('only counts bets placed this calendar month', () => {
+  it('only counts bets placed this calendar month, at contracts x cost', () => {
     const positions = [
-      position(20, '2026-10-02T00:00:00.000Z'),
-      position(10, '2026-10-20T00:00:00.000Z'),
-      position(50, '2026-09-30T00:00:00.000Z'),
+      makePosition({ costPerContract: 60, contracts: 2, placedAt: '2026-10-02T00:00:00.000Z' }),
+      spent(100, '2026-10-20T00:00:00.000Z'),
+      spent(300, '2026-09-30T00:00:00.000Z'),
     ];
-    expect(remainingBudget(profile, positions, now)).toBe(70);
+    expect(remainingBudget(profile, positions, now)).toBe(280);
   });
 
   it('never reports a negative remaining budget', () => {
-    expect(remainingBudget(profile, [position(150, '2026-10-01T00:00:00.000Z')], now)).toBe(0);
+    expect(remainingBudget(profile, [spent(900, '2026-10-01T00:00:00.000Z')], now)).toBe(0);
   });
 });
 
 describe('checkStake', () => {
   it('accepts a stake within every limit', () => {
-    expect(checkStake(25, profile, [], now)).toEqual({ ok: true });
+    expect(checkStake(120, profile, [], now)).toEqual({ ok: true });
   });
 
-  it('rejects stakes below the minimum', () => {
-    expect(checkStake(1, profile, [], now)).toMatchObject({ ok: false });
+  it('rejects an empty stake', () => {
+    expect(checkStake(0, profile, [], now)).toMatchObject({ ok: false });
   });
 
   it('rejects stakes over the per-bet cap', () => {
-    const result = checkStake(30, profile, [], now);
-    expect(result.ok).toBe(false);
-    expect(!result.ok && result.reason).toMatch(/\$25 per-bet limit/);
+    const result = checkStake(200, profile, [], now);
+    expect(!result.ok && result.reason).toMatch(/\$150 per-bet limit/);
   });
 
   it('rejects stakes over what is left this month', () => {
-    const spent = [position(90, '2026-10-05T00:00:00.000Z')];
-    const result = checkStake(20, profile, spent, now);
-    expect(!result.ok && result.reason).toMatch(/\$10 left/);
+    const result = checkStake(120, profile, [spent(420, '2026-10-05T00:00:00.000Z')], now);
+    expect(!result.ok && result.reason).toMatch(/\$80 left/);
   });
 });
 
-describe('stakeOptions', () => {
-  it('offers presets up to the per-bet cap', () => {
-    expect(stakeOptions(profile, [], now)).toEqual([5, 10, 25]);
+describe('contractOptions', () => {
+  it('offers as many whole contracts as fit under the ceiling', () => {
+    expect(contractOptions(45, profile, [], now)).toEqual([1, 2, 3]);
   });
 
-  it('adds the exact ceiling when it falls between presets', () => {
-    const spent = [position(82, '2026-10-05T00:00:00.000Z')];
-    expect(stakeOptions(profile, spent, now)).toEqual([5, 10, 18]);
+  it('offers nothing when one contract is over the ceiling', () => {
+    expect(contractOptions(184, profile, [], now)).toEqual([]);
   });
 
-  it('offers nothing once the month is spent', () => {
-    const spent = [position(100, '2026-10-05T00:00:00.000Z')];
-    expect(stakeOptions(profile, spent, now)).toEqual([]);
+  it('shrinks as the monthly budget gets used', () => {
+    expect(contractOptions(45, profile, [spent(400, '2026-10-05T00:00:00.000Z')], now)).toEqual([1, 2]);
+  });
+
+  it('caps the count for very cheap contracts', () => {
+    expect(contractOptions(1, profile, [], now)).toHaveLength(MAX_CONTRACTS);
+  });
+
+  it('rejects non-positive costs', () => {
+    expect(contractOptions(0, profile, [], now)).toEqual([]);
   });
 });
 

@@ -1,3 +1,4 @@
+import { positionCost } from './portfolio';
 import type { Position, Profile } from './types';
 
 /**
@@ -6,9 +7,12 @@ import type { Position, Profile } from './types';
  * more than a fixed share of it.
  */
 
-export const MIN_STAKE = 5;
-export const STAKE_PRESETS = [5, 10, 25, 50, 100, 250, 500];
-export const BUDGET_OPTIONS = [25, 50, 100, 250, 500];
+/**
+ * Options trade in whole contracts (100 shares each), so the smallest bet is
+ * one contract. Budgets start higher than a fractional-share app would need.
+ */
+export const BUDGET_OPTIONS = [100, 250, 500, 1000];
+export const MAX_CONTRACTS = 10;
 
 /** Taleb's barbell: most money very safe, a small slice in convex bets. */
 export const DEFAULT_MOONSHOT_SHARE = 0.1;
@@ -24,7 +28,7 @@ function sameMonth(a: Date, b: Date): boolean {
 export function spentThisMonth(positions: Position[], now: Date): number {
   return positions
     .filter((p) => sameMonth(new Date(p.placedAt), now))
-    .reduce((sum, p) => sum + p.stake, 0);
+    .reduce((sum, p) => sum + positionCost(p), 0);
 }
 
 export function remainingBudget(profile: Profile, positions: Position[], now: Date): number {
@@ -44,8 +48,8 @@ export function checkStake(
   positions: Position[],
   now: Date,
 ): StakeCheck {
-  if (!Number.isFinite(stake) || stake < MIN_STAKE) {
-    return { ok: false, reason: `Minimum bet is $${MIN_STAKE}.` };
+  if (!Number.isFinite(stake) || stake <= 0) {
+    return { ok: false, reason: 'Pick how many contracts to buy.' };
   }
   const cap = maxStakePerBet(profile);
   if (stake > cap) {
@@ -64,13 +68,16 @@ export function checkStake(
   return { ok: true };
 }
 
-/** Preset stake chips the user can tap, limited to what's allowed right now. */
-export function stakeOptions(profile: Profile, positions: Position[], now: Date): number[] {
-  const ceiling = stakeCeiling(profile, positions, now);
-  if (ceiling < MIN_STAKE) return [];
-  const options = STAKE_PRESETS.filter((p) => p <= ceiling);
-  if (!options.includes(ceiling) && options.length < 4) options.push(ceiling);
-  return options;
+/** Contract counts the user can pick, limited by the per-bet cap and what's left this month. */
+export function contractOptions(
+  costPerContract: number,
+  profile: Profile,
+  positions: Position[],
+  now: Date,
+): number[] {
+  if (!(costPerContract > 0)) return [];
+  const affordable = Math.floor(stakeCeiling(profile, positions, now) / costPerContract);
+  return Array.from({ length: Math.min(affordable, MAX_CONTRACTS) }, (_, i) => i + 1);
 }
 
 export function barbellSplit(totalSavings: number, moonshotShare = DEFAULT_MOONSHOT_SHARE) {

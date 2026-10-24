@@ -25,7 +25,7 @@ export const EVENTS: EventQuestion[] = [
         side: 'no',
         label: 'Disruption drags on',
         rationale: 'Longer routes and scarce supply favor tanker owners, oil, and defense.',
-        betIds: ['tanker-calls', 'oil-calls', 'defense-etf'],
+        betIds: ['tanker-calls', 'oil-calls', 'defense-calls'],
       },
     ],
   },

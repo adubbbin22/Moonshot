@@ -10,12 +10,16 @@ import { spacing } from '@/theme/tokens';
 
 const PRINCIPLES = [
   {
-    title: 'Capped downside',
-    body: 'Every bet can lose at most what you put in. No leverage, no margin, no shorting.',
+    title: 'Defined risk',
+    body: 'Every bet is a long option or a debit spread. You pay once up front and that’s the most you can lose. No margin, no naked selling, no credit spreads.',
   },
   {
-    title: 'Open-ended upside',
-    body: 'We only show bets where being right pays many times what being wrong costs.',
+    title: 'Asymmetric payoff',
+    body: 'We only show bets that can pay at least 3x what they cost.',
+  },
+  {
+    title: 'Market odds, not opinions',
+    body: 'The odds on every bet come from option prices, so you see what the market thinks before you bet against it.',
   },
   {
     title: 'Thesis first',

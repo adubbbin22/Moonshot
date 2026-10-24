@@ -1,5 +1,6 @@
 import { buildThesis, matchBets } from '../thesisEngine';
-import type { Bet, Theme } from '../types';
+import type { Theme } from '../types';
+import { makeBet } from '@/test/fixtures';
 
 const theme: Theme = {
   id: 'ai',
@@ -27,24 +28,6 @@ const theme: Theme = {
   ],
 };
 
-function bet(id: string, tags: string[], best: number): Bet {
-  return {
-    id,
-    title: id,
-    pitch: '',
-    instrument: { kind: 'stock', symbol: id.toUpperCase(), name: id },
-    horizon: '2028',
-    scenarios: [
-      { label: 'Wrong', probability: 0.5, multiple: 0 },
-      { label: 'Right', probability: 0.5, multiple: best },
-    ],
-    whatHasToBeTrue: [],
-    killCriteria: [],
-    category: 'tech',
-    tags,
-  };
-}
-
 describe('buildThesis', () => {
   it('joins fragments in step order and dedupes tags', () => {
     const thesis = buildThesis(theme, { winners: 'chips', scale: 'huge' });
@@ -63,21 +46,21 @@ describe('buildThesis', () => {
 
 describe('matchBets', () => {
   const bets = [
-    bet('chips', ['ai-bull', 'ai-compute'], 5),
-    bet('power', ['ai-power'], 10),
-    bet('broad', ['ai-bull'], 3),
-    bet('moonshot', ['ai-bull'], 20),
-    bet('unrelated', ['gold'], 50),
+    makeBet('broad', ['ai-bull']),
+    makeBet('chips', ['ai-bull', 'ai-compute']),
+    makeBet('power', ['ai-power']),
+    makeBet('moonshot', ['ai-bull']),
+    makeBet('unrelated', ['gold']),
   ];
 
-  it('ranks by tag overlap, then by asymmetry, and drops non-matches', () => {
+  it('ranks by tag overlap, keeps catalog order on ties, and drops non-matches', () => {
     const matches = matchBets(['ai-bull', 'ai-compute'], bets, 10);
-    expect(matches.map((m) => m.bet.id)).toEqual(['chips', 'moonshot', 'broad']);
+    expect(matches.map((m) => m.bet.id)).toEqual(['chips', 'broad', 'moonshot']);
     expect(matches[0].score).toBe(2);
   });
 
   it('respects the limit', () => {
-    expect(matchBets(['ai-bull'], bets, 1).map((m) => m.bet.id)).toEqual(['moonshot']);
+    expect(matchBets(['ai-bull'], bets, 1).map((m) => m.bet.id)).toEqual(['broad']);
   });
 
   it('returns nothing when no tags match', () => {

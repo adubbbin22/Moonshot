@@ -1,36 +1,47 @@
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { Card, Text } from '@/components/ui';
-import { bestMultiple, lossProbability } from '@/domain/payoff';
 import type { Bet } from '@/domain/types';
-import { formatMultiple, formatPercent } from '@/lib/format';
-import { INSTRUMENT_LABELS } from '@/theme/categories';
-import { spacing } from '@/theme/tokens';
-
-export function instrumentLine(bet: Bet): string {
-  const { instrument } = bet;
-  const parts = [instrument.symbol, INSTRUMENT_LABELS[instrument.kind]];
-  if (instrument.expiry) parts.push(instrument.expiry);
-  return parts.join(' · ');
-}
+import { usePricedBet } from '@/hooks/usePricedBet';
+import { formatMoney, formatPercent } from '@/lib/format';
+import { STRUCTURE_LABELS } from '@/theme/categories';
+import { colors, spacing } from '@/theme/tokens';
 
 export function BetCard({ bet, onPress }: { bet: Bet; onPress: () => void }) {
+  const state = usePricedBet(bet);
+  const { strategy } = bet;
+
   return (
     <Card onPress={onPress} accessibilityLabel={`${bet.title}. ${bet.pitch}`}>
       <View style={styles.header}>
-        <Text variant="heading" style={styles.title}>
-          {bet.title}
-        </Text>
+        <Text variant="heading">{bet.title}</Text>
         <Text variant="caption" tone="faint">
-          {instrumentLine(bet)}
+          {strategy.underlying} · {STRUCTURE_LABELS[strategy.kind]}
+          {state.status === 'ready' ? ` · ${state.priced.daysToExpiry} days` : ''}
         </Text>
       </View>
       <Text tone="muted">{bet.pitch}</Text>
-      <View style={styles.stats}>
-        <MiniStat label="Worst case" value="Lose stake" tone="downside" />
-        <MiniStat label="Best case" value={formatMultiple(bestMultiple(bet.scenarios))} tone="upside" />
-        <MiniStat label="Chance of loss" value={formatPercent(lossProbability(bet.scenarios))} />
-      </View>
+      {state.status === 'loading' ? <ActivityIndicator color={colors.textFaint} style={styles.loading} /> : null}
+      {state.status === 'error' ? (
+        <Text variant="caption" tone="downside">
+          Couldn’t price this right now.
+        </Text>
+      ) : null}
+      {state.status === 'ready' ? (
+        <View style={styles.stats}>
+          <MiniStat label="Costs" value={formatMoney(state.priced.costPerContract)} tone="downside" />
+          <MiniStat
+            label="Pays up to"
+            value={
+              state.priced.maxValuePerContract === null
+                ? 'No cap'
+                : formatMoney(state.priced.maxValuePerContract)
+            }
+            tone="upside"
+          />
+          <MiniStat label="Market odds" value={formatPercent(state.priced.probProfit)} />
+        </View>
+      ) : null}
     </Card>
   );
 }
@@ -58,7 +69,7 @@ function MiniStat({
 
 const styles = StyleSheet.create({
   header: { gap: spacing.xs },
-  title: { flexShrink: 1 },
   stats: { flexDirection: 'row', gap: spacing.md },
   miniStat: { flex: 1, gap: 2 },
+  loading: { alignSelf: 'flex-start' },
 });

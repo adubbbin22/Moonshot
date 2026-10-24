@@ -1,16 +1,20 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
 
-import { instrumentLine } from '@/components/BetCard';
-import { OutcomeChart } from '@/components/OutcomeChart';
+import { OutcomeLadder } from '@/components/OutcomeLadder';
+import { PayoffDiagram } from '@/components/PayoffDiagram';
 import { Button, Card, Chip, Screen, Stat, StatRow, Text } from '@/components/ui';
-import { bestMultiple, lossProbability } from '@/domain/payoff';
-import { checkStake, stakeOptions } from '@/domain/sizing';
-import type { PositionSource, Side } from '@/domain/types';
-import { formatMoney, formatPercent } from '@/lib/format';
+import { contractOptions, maxStakePerBet, stakeCeiling } from '@/domain/sizing';
+import { isAsymmetric, MIN_PAYOFF_MULTIPLE, type PricedStrategy } from '@/domain/strategy';
+import type { Bet, PositionSource, Side } from '@/domain/types';
+import { usePricedBet } from '@/hooks/usePricedBet';
+import { formatDate, formatMoney, formatPercent, formatPrice } from '@/lib/format';
+import { positionLabel } from '@/lib/strategyText';
 import { catalog } from '@/services/catalog';
+import { marketData } from '@/services/pricing';
 import { useAppState, usePlaceBet, type PlaceBetResult } from '@/state/store';
+import { STRUCTURE_EXPLAINERS, STRUCTURE_LABELS } from '@/theme/categories';
 import { colors, radius, spacing, type as typeScale } from '@/theme/tokens';
 
 type Params = {
@@ -29,17 +33,11 @@ function sourceFrom(params: Params): PositionSource {
   return { type: 'direct' };
 }
 
-/** Bet detail: see the payoff shape, choose a small stake, write down why, place it. */
+/** Bet detail: the exact options trade, its payoff, market odds, sizing and "your why". */
 export default function BetScreen() {
   const params = useLocalSearchParams<Params>();
   const bet = catalog.getBet(params.id);
-  const { profile, positions } = useAppState();
-  const placeBet = usePlaceBet();
-
-  const options = stakeOptions(profile, positions, new Date());
-  const [stake, setStake] = useState(() => options.filter((o) => o <= 25).at(-1) ?? options[0] ?? 0);
-  const [why, setWhy] = useState(params.thesis ?? '');
-  const [placing, setPlacing] = useState(false);
+  const pricing = usePricedBet(bet);
   const [result, setResult] = useState<PlaceBetResult | null>(null);
 
   if (!bet) {
@@ -50,11 +48,9 @@ export default function BetScreen() {
     );
   }
 
-  const alreadyIn = positions
-    .filter((p) => p.betId === bet.id && p.status === 'open')
-    .reduce((sum, p) => sum + p.stake, 0);
-
   if (result?.ok) {
+    const { position } = result;
+    const max = position.maxValuePerContract;
     return (
       <Screen
         edges={['bottom']}
@@ -62,97 +58,162 @@ export default function BetScreen() {
         <View style={styles.success}>
           <Text variant="display">You’re in.</Text>
           <Text variant="heading">
-            {formatMoney(result.position.stake)} on “{bet.title}”.
+            {position.contracts} × {positionLabel(position.underlying, position.kind, position.legs, position.expiration)}
           </Text>
           <Text tone="muted">
-            Worst case you lose {formatMoney(result.position.stake)}. If you’re right, it could be worth{' '}
-            {formatMoney(result.position.stake * bestMultiple(bet.scenarios))} by {bet.horizon}.
+            You paid {formatMoney(position.costPerContract * position.contracts)}. That’s the most you can lose.
+            {max === null
+              ? ' There’s no cap on what it can be worth.'
+              : ` At best it’s worth ${formatMoney(max * position.contracts)} at expiry.`}
           </Text>
-          <Text tone="muted">
-            Your why is saved with the bet, so you can check it against what actually happens.
-          </Text>
+          <Text tone="muted">Your why is saved with the bet, so you can check it against what actually happens.</Text>
         </View>
       </Screen>
     );
   }
 
-  const check = checkStake(stake, profile, positions, new Date());
-  const onPlace = async () => {
-    setPlacing(true);
-    const placed = await placeBet({ betId: bet.id, stake, thesis: why, source: sourceFrom(params) });
-    setPlacing(false);
-    setResult(placed);
-  };
-
   return (
-    <Screen
-      edges={['bottom']}
-      footer={
-        <View style={styles.footer}>
-          {result && !result.ok ? (
-            <Text variant="caption" tone="downside">
-              {result.reason}
-            </Text>
-          ) : null}
-          {!check.ok && options.length > 0 ? (
-            <Text variant="caption" tone="downside">
-              {check.reason}
-            </Text>
-          ) : null}
-          <Button
-            label={options.length === 0 ? 'Monthly budget used up' : `Place ${formatMoney(stake)} paper bet`}
-            disabled={!check.ok}
-            loading={placing}
-            onPress={onPlace}
-          />
-        </View>
-      }>
+    <Screen edges={['bottom']}>
       <View style={styles.header}>
         <Text variant="caption" tone="faint">
-          {instrumentLine(bet)} · {bet.instrument.name}
+          {bet.strategy.underlyingName} ({bet.strategy.underlying}) · {STRUCTURE_LABELS[bet.strategy.kind]}
         </Text>
         <Text variant="title">{bet.title}</Text>
         <Text tone="muted">{bet.pitch}</Text>
-        {bet.instrument.strikeDescription ? (
-          <Text variant="caption" tone="faint">
-            Strike {bet.instrument.strikeDescription}, expires {bet.instrument.expiry}.
-          </Text>
-        ) : null}
-        {alreadyIn > 0 ? <Chip label={`You have ${formatMoney(alreadyIn)} on this`} color={colors.violet} /> : null}
       </View>
+
+      {pricing.status === 'loading' ? (
+        <Card style={styles.center}>
+          <ActivityIndicator color={colors.textMuted} />
+          <Text variant="caption" tone="faint">
+            Getting the option chain from {marketData.label}…
+          </Text>
+        </Card>
+      ) : null}
+
+      {pricing.status === 'error' ? (
+        <Card>
+          <Text variant="heading">Couldn’t price this bet</Text>
+          <Text tone="muted">{pricing.message}</Text>
+          <Text variant="caption" tone="faint">
+            Source: {marketData.label}
+          </Text>
+        </Card>
+      ) : null}
+
+      {pricing.status === 'ready' ? (
+        <PricedBet bet={bet} priced={pricing.priced} params={params} onPlaced={setResult} lastResult={result} />
+      ) : null}
+    </Screen>
+  );
+}
+
+function PricedBet({
+  bet,
+  priced,
+  params,
+  onPlaced,
+  lastResult,
+}: {
+  bet: Bet;
+  priced: PricedStrategy;
+  params: Params;
+  onPlaced: (result: PlaceBetResult) => void;
+  lastResult: PlaceBetResult | null;
+}) {
+  const { profile, positions } = useAppState();
+  const placeBet = usePlaceBet();
+  const now = new Date();
+  const options = contractOptions(priced.costPerContract, profile, positions, now);
+  const [contracts, setContracts] = useState(1);
+  const [why, setWhy] = useState(params.thesis ?? '');
+  const [placing, setPlacing] = useState(false);
+  const affordable = options.includes(contracts);
+
+  const onPlace = async () => {
+    setPlacing(true);
+    const placed = await placeBet({ betId: bet.id, priced, contracts, thesis: why, source: sourceFrom(params) });
+    setPlacing(false);
+    onPlaced(placed);
+  };
+
+  const total = priced.costPerContract * contracts;
+
+  return (
+    <>
+      <Card>
+        <Text variant="label" tone="muted">
+          The trade
+        </Text>
+        <Text variant="heading">{positionLabel(priced.underlying, priced.kind, priced.legs, priced.expiration)}</Text>
+        {priced.legs.map((leg) => (
+          <View key={leg.symbol} style={styles.legRow}>
+            <Text>
+              {leg.action === 'buy' ? 'Buy' : 'Sell'} {formatPrice(leg.strike)} {leg.type}
+            </Text>
+            <Text tone="muted">{formatPrice(Math.round(leg.price * 100) / 100)}</Text>
+          </View>
+        ))}
+        <Text variant="caption" tone="faint">
+          {STRUCTURE_EXPLAINERS[priced.kind]} Expires {formatDate(priced.expiration)} ({priced.daysToExpiry} days).
+        </Text>
+        <Text variant="caption" tone="faint">
+          Prices: {marketData.label} · mid prices · as of {new Date(priced.asOf).toLocaleString()}
+        </Text>
+      </Card>
+
+      <Card>
+        <StatRow>
+          <Stat label="Most you can lose" value={formatMoney(total)} tone="downside" />
+          <Stat
+            label="Most it can be worth"
+            value={priced.maxValuePerContract === null ? 'No cap' : formatMoney(priced.maxValuePerContract * contracts)}
+            tone="upside"
+          />
+          <Stat label="Market odds of profit" value={formatPercent(priced.probProfit)} />
+        </StatRow>
+        <PayoffDiagram priced={priced} contracts={contracts} />
+      </Card>
+
+      {!isAsymmetric(priced) ? (
+        <Card style={styles.warning}>
+          <Text variant="label">Not asymmetric enough today</Text>
+          <Text tone="muted">
+            At today’s prices this pays less than {MIN_PAYOFF_MULTIPLE}x what it costs. Moonshot normally wouldn’t
+            show it.
+          </Text>
+        </Card>
+      ) : null}
 
       <Card>
         <Text variant="label" tone="muted">
-          How much?
+          How many?
         </Text>
         {options.length > 0 ? (
           <View style={styles.chips}>
-            {options.map((amount) => (
+            {options.map((n) => (
               <Chip
-                key={amount}
-                label={formatMoney(amount)}
-                selected={stake === amount}
-                onPress={() => setStake(amount)}
+                key={n}
+                label={`${n} · ${formatMoney(priced.costPerContract * n)}`}
+                selected={contracts === n}
+                onPress={() => setContracts(n)}
               />
             ))}
           </View>
         ) : (
           <Text tone="muted">
-            You’ve used this month’s moonshot budget. That’s the system working.
+            One contract costs {formatMoney(priced.costPerContract)}. Right now you can put up to{' '}
+            {formatMoney(stakeCeiling(profile, positions, now))} into a single bet (
+            {formatMoney(maxStakePerBet(profile))} per-bet limit). Options trade in whole contracts of 100 shares.
           </Text>
         )}
-        <StatRow>
-          <Stat label="Most you can lose" value={formatMoney(stake)} tone="downside" />
-          <Stat label="Best case" value={formatMoney(stake * bestMultiple(bet.scenarios))} tone="upside" />
-          <Stat label="Chance of loss" value={formatPercent(lossProbability(bet.scenarios))} />
-        </StatRow>
       </Card>
 
       <Card>
         <Text variant="label" tone="muted">
-          What {formatMoney(stake)} could become by {bet.horizon}
+          Where {priced.underlying} could finish on {formatDate(priced.expiration)}
         </Text>
-        <OutcomeChart stake={stake} scenarios={bet.scenarios} />
+        <OutcomeLadder underlying={priced.underlying} outcomes={priced.outcomes} contracts={contracts} />
       </Card>
 
       <Card>
@@ -186,14 +247,37 @@ export default function BetScreen() {
           style={styles.input}
         />
       </Card>
-    </Screen>
+
+      <View style={styles.footer}>
+        {lastResult && !lastResult.ok ? (
+          <Text variant="caption" tone="downside">
+            {lastResult.reason}
+          </Text>
+        ) : null}
+        <Button
+          label={
+            affordable
+              ? `Buy ${contracts} for ${formatMoney(total)} (paper)`
+              : options.length === 0
+                ? 'Over your per-bet limit'
+                : 'Pick how many'
+          }
+          disabled={!affordable}
+          loading={placing}
+          onPress={onPlace}
+        />
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   header: { gap: spacing.sm },
+  center: { alignItems: 'center' },
+  legRow: { flexDirection: 'row', justifyContent: 'space-between' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   spaced: { marginTop: spacing.sm },
+  warning: { borderColor: colors.no },
   input: {
     ...typeScale.body,
     color: colors.text,
