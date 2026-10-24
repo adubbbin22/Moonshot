@@ -88,3 +88,29 @@ export function eventVsOptions(pEvent: number, optionsOdds: number): EventVsOpti
 export function edgeOverCrowd(yourProbability: number, pEvent: number): number {
   return yourProbability - pEvent;
 }
+
+export interface VenueStake {
+  venue: PredictionVenue;
+  side: Side;
+  /** Price of one contract of this side, as a fraction of its $1 payout. */
+  price: number;
+  contracts: number;
+  cost: number;
+  /** Each contract pays $1 if the side resolves. */
+  payout: number;
+  multiple: number;
+}
+
+/**
+ * The same dollars on the venue's contract for this side. Contracts pay $1
+ * each and trade in whole numbers; before fees. Null when the side is priced
+ * at a certainty or the stake doesn't buy one contract.
+ */
+export function venueStake(quote: Pick<PredictionQuote, 'venue' | 'yes'>, side: Side, stake: number): VenueStake | null {
+  const price = sideProbability(quote.yes, side);
+  if (price <= 0 || price >= 1 || stake <= 0) return null;
+  const contracts = Math.floor(stake / price + 1e-9);
+  if (contracts === 0) return null;
+  return { venue: quote.venue, side, price, contracts, cost: contracts * price, payout: contracts, multiple: 1 / price };
+}
+

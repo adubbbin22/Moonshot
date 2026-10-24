@@ -11,11 +11,13 @@ import { CompanyGlance } from '@/components/stock/CompanyGlance';
 import { WhatMovesIt } from '@/components/stock/WhatMovesIt';
 import { ReasoningCard } from '@/components/thesis/ReasoningCard';
 import { Button, Card, Chip, Screen, Stat, StatRow, Text } from '@/components/ui';
+import { VsVenueCard } from '@/components/VsVenueCard';
 import { contractOptions, maxStakePerBet, stakeCeiling } from '@/domain/sizing';
 import { impliedOdds, isAsymmetric, MIN_PAYOFF_MULTIPLE, type PricedStrategy } from '@/domain/strategy';
-import type { Bet, EventQuestion, PositionSource, Side } from '@/domain/types';
+import type { Bet, Call, EventQuestion, PositionSource, PredictionQuote, Side } from '@/domain/types';
 import { useCompany } from '@/hooks/useCompany';
 import { useExpirations, type ExpirationsState } from '@/hooks/useExpirations';
+import { usePredictionQuotes } from '@/hooks/usePredictionQuotes';
 import { usePricedBet } from '@/hooks/usePricedBet';
 import { useReasoning } from '@/hooks/useReasoning';
 import { formatDate, formatMoney, formatPercent, formatPrice } from '@/lib/format';
@@ -57,6 +59,8 @@ export default function BetScreen() {
     expirations.options.find((p) => p.expiration === expiration) ?? (pricing.status === 'ready' ? pricing.priced : undefined);
   const reasoning = useReasoning(params.id, params.thesisId, params.stepId);
   const call = useAppState().calls.find((c) => c.questionId === params.eventId);
+  const odds = usePredictionQuotes(question);
+  const quotes = odds.status === 'ready' ? odds.quotes : [];
   // The user's own chance this bet pays: their chain through a thesis, or their call on the question.
   const yours =
     reasoning?.chain !== undefined
@@ -145,6 +149,9 @@ export default function BetScreen() {
           expirations={expirations}
           onSelectExpiration={setExpiration}
           nextEarnings={company.status === 'ready' ? company.company?.financials?.nextEarnings : undefined}
+          side={params.side}
+          call={call}
+          quotes={quotes}
           params={params}
           reasoningText={reasoning?.text}
           killCriteria={reasoning?.killCriteria}
@@ -164,6 +171,9 @@ function PricedBet({
   expirations,
   onSelectExpiration,
   nextEarnings,
+  side,
+  call,
+  quotes,
   params,
   reasoningText,
   killCriteria,
@@ -179,6 +189,10 @@ function PricedBet({
   onSelectExpiration: (expiration: string) => void;
   /** The company's next earnings date, when known, to place against the expiration. */
   nextEarnings?: string;
+  /** The side of the question this bet expresses, the user's call on it, and the venues' quotes, for the venue comparison. */
+  side?: Side;
+  call?: Call;
+  quotes: PredictionQuote[];
   params: Params;
   /** The user's chain as a sentence, offered as a starting point for their why. */
   reasoningText?: string;
@@ -258,6 +272,10 @@ function PricedBet({
         </StatRow>
         <PayoffDiagram priced={priced} contracts={contracts} />
       </Card>
+
+      {question && side ? (
+        <VsVenueCard priced={priced} contracts={contracts} question={question} side={side} quotes={quotes} call={call} />
+      ) : null}
 
       {!isAsymmetric(priced) ? (
         <Card style={styles.warning}>

@@ -1,4 +1,4 @@
-import { edgeOverCrowd, eventVsOptions, sideProbability, venueArbitrage, venueSpread } from '../arbitrage';
+import { edgeOverCrowd, eventVsOptions, sideProbability, venueArbitrage, venueSpread, venueStake } from '../arbitrage';
 
 describe('venue arbitrage', () => {
   it('finds a guaranteed edge when YES here plus NO there costs under a dollar', () => {
@@ -41,5 +41,28 @@ describe('event vs options', () => {
     expect(eventVsOptions(0.2, 0.26).verdict).toBe('move-priced-above-event');
     expect(eventVsOptions(0.28, 0.26).verdict).toBe('close');
     expect(edgeOverCrowd(0.9, 0.7)).toBeCloseTo(0.2);
+  });
+});
+
+describe('venueStake', () => {
+  const kalshi = { venue: 'kalshi' as const, yes: 0.58 };
+
+  it('buys whole contracts of the chosen side with the stake', () => {
+    expect(venueStake(kalshi, 'yes', 139)).toEqual({
+      venue: 'kalshi',
+      side: 'yes',
+      price: 0.58,
+      contracts: 239,
+      cost: expect.closeTo(138.62, 6),
+      payout: 239,
+      multiple: expect.closeTo(1.724, 3),
+    });
+    expect(venueStake(kalshi, 'no', 139)).toMatchObject({ price: expect.closeTo(0.42, 6), contracts: 330, payout: 330 });
+  });
+
+  it('gives nothing for a certainty or a stake below one contract', () => {
+    expect(venueStake({ venue: 'kalshi', yes: 1 }, 'yes', 100)).toBeNull();
+    expect(venueStake({ venue: 'kalshi', yes: 0 }, 'yes', 100)).toBeNull();
+    expect(venueStake(kalshi, 'yes', 0.5)).toBeNull();
   });
 });

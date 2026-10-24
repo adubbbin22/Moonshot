@@ -74,7 +74,12 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
   (any gap is an edge before fees; `ESTIMATED_FEES` decides if it survives),
   and `eventVsOptions` turns the pair of event odds and options odds into
   the link the options price assumes: how often the stock must follow the
-  event. The two claims are kept apart in the copy.
+  event. `venueStake` puts the same dollars on a venue's contract (whole
+  contracts paying a dollar each) so the bet screen can show, side by
+  side, what each buys, pays and needs; a contract at price p is fair at
+  p, so the link that makes the options price fair is the link at which
+  the options bet beats the contract. The two claims are kept apart in
+  the copy.
 - **Expiration day** (`domain/expiry.ts`, `hooks/useExpirations`,
   `components/ExpirationPicker.tsx`): the bet screen spells out the contract's
   expiration (standard monthly or not, days away, the gap after the question
