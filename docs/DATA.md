@@ -97,6 +97,41 @@ Two practical consequences:
    Send multi-leg limit orders at mid (`src/services/broker.ts` already
    models them).
 
+## Why not Yahoo Finance or Robinhood?
+
+Both are fine for **your own research on your own machine**. Neither can
+power an app that other people use.
+
+- **Yahoo Finance** has free, delayed option chains, but there's no official
+  API. Libraries like yfinance call unofficial endpoints that need a
+  cookie+crumb handshake and break without notice. Yahoo's terms prohibit
+  automated collection and using its data to build a data feed. Yahoo
+  rate-limits and blocks data-center IPs, which is exactly where our backend
+  would run (users report blocks lasting 48 hours or more). And it gives us
+  no license to show exchange data to users.
+  [Yahoo ToS](https://legal.yahoo.com/us/en/frontier/terms/otos/index.html),
+  [yfinance docs](https://ranaroussi.github.io/yfinance/),
+  [rate-limit report](https://github.com/TauricResearch/TradingAgents/issues/1425)
+- **Robinhood** has an official MCP server for its Agentic Trading beta
+  (`agent.robinhood.com/mcp/trading`). It lets an AI assistant act on **your
+  own** account through OAuth: positions, equity quotes, watchlists, and
+  orders in a dedicated agent account. It is not a market data feed: data
+  you see as a Robinhood customer isn't licensed for redistribution to our
+  users. Options support is still in flux (sources from mid and late 2026
+  disagree). There is no official equities or options data API. Community
+  MCPs that expose option chains with greeks wrap the unofficial
+  `robin_stocks` API, which Robinhood doesn't sanction and which risks your
+  account.
+  [Robinhood: open to agents](https://robinhood.com/newsroom/robinhood-is-now-open-to-agents/),
+  [setup](https://robinhood.com/us/en/support/articles/agentic-trading-overview/),
+  [review](https://sentisense.ai/blog/robinhood-agentic-trading-mcp-review/)
+
+Where they do help: connect the Robinhood MCP to Claude to research ideas
+and sanity-check prices for your own decisions, or use yfinance in a local
+notebook to explore chains. For the app, a free Alpaca key gives the same
+"free for development" benefit through a sanctioned API, and Alpaca is also
+the likely execution partner.
+
 ## Questions to ask every vendor
 
 - Can we display your options data in a consumer app? Delayed? Real-time?
