@@ -121,4 +121,27 @@ describe('thesis drafting route', () => {
     expect((await get(port, '/thesis/draft')).status).toBe(405);
     server.close();
   });
+
+  it('drafts a profile for editors on its own route', async () => {
+    const profile = { symbol: 'AMD', name: 'AMD' };
+    const draftProfile = jest.fn(async () => profile as never);
+    const server = createMarketDataServer(async () => chain, { draftProfile });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as AddressInfo).port;
+    const req = (body: string) =>
+      new Promise<{ status: number; body: unknown }>((resolve, reject) => {
+        const r = request({ host: '127.0.0.1', port, path: '/underlyings/draft', method: 'POST' }, (res) => {
+          let data = '';
+          res.on('data', (chunk) => (data += chunk));
+          res.on('end', () => resolve({ status: res.statusCode ?? 0, body: data ? JSON.parse(data) : null }));
+        });
+        r.on('error', reject);
+        r.end(body);
+      });
+    expect(await req('{"symbol":"AMD"}')).toEqual({ status: 200, body: { profile } });
+    expect(draftProfile).toHaveBeenCalledWith('AMD');
+    expect((await req('{"belief":"x"}')).status).toBe(400);
+    expect((await post(port, '{"belief":"x"}')).status).toBe(503);
+    server.close();
+  });
 });

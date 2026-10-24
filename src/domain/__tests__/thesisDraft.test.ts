@@ -1,27 +1,18 @@
 import { resolveMechanisms, THESIS_DRAFT_SCHEMA, toThesisTree, validateDraft, type ThesisDraft } from '../thesisDraft';
 import { allSteps } from '../thesisTree';
-import type { Mechanism } from '../types';
+import type { ThesisBetLink } from '../types';
 
-const mechanisms: Mechanism[] = [
-  {
-    id: 'robotaxi-rollout',
-    label: 'Robotaxis spread',
-    description: 'Driverless rides go on sale in more cities.',
-    bets: [{ betId: 'robotaxi-calls', why: 'Pays if the operator rerates.' }],
-  },
-  {
-    id: 'auto-insurers-squeezed',
-    label: 'Insurers lose premiums',
-    description: 'Fewer human drivers means fewer policies.',
-    bets: [
-      { betId: 'insurer-puts', why: 'Pays if insurers fall.' },
-      { betId: 'robotaxi-calls', why: 'Also pays here.' },
-    ],
-  },
-];
+const links: Record<string, ThesisBetLink[]> = {
+  'robotaxi-rollout': [{ betId: 'robotaxi-calls', why: 'Pays if the operator rerates.' }],
+  'auto-insurers-squeezed': [
+    { betId: 'insurer-puts', why: 'Pays if insurers fall.' },
+    { betId: 'robotaxi-calls', why: 'Also pays here.' },
+  ],
+};
+const linksFor = (id: string) => links[id] ?? [];
 
 const ctx = {
-  mechanismIds: new Set(mechanisms.map((m) => m.id)),
+  mechanismIds: new Set(Object.keys(links)),
   questionIds: new Set(['robotaxi-cities-2028']),
   securities: ['TSLA', 'Tesla', 'Lockheed Martin'],
 };
@@ -159,11 +150,10 @@ describe('validateDraft', () => {
 });
 
 describe('toThesisTree', () => {
-  const byId = new Map(mechanisms.map((m) => [m.id, m]));
   const provenance = { kind: 'drafted' as const, prompt: 'robotaxis', model: 'test', draftedAt: '2026-10-24T00:00:00Z' };
 
   it('keeps the tree shape, resolves mechanisms to bets and drops nulls', () => {
-    const tree = toThesisTree(draft, { id: 'draft-1', emoji: '🤖', provenance, mechanisms: byId });
+    const tree = toThesisTree(draft, { id: 'draft-1', emoji: '🤖', provenance, linksFor });
     expect(tree.provenance).toEqual(provenance);
     expect(tree.premises[0].check).toEqual({ questionId: 'robotaxi-cities-2028', side: 'yes' });
     expect('check' in tree.premises[1]).toBe(false);
@@ -177,8 +167,8 @@ describe('toThesisTree', () => {
 
   it('dedupes a bet two mechanisms share', () => {
     const tree = resolveMechanisms(
-      { ...toThesisTree(draft, { id: 'd', emoji: '🤖', provenance, mechanisms: byId }), ifTrue: [{ id: 'x', claim: 'c', because: 'b', against: 'a', mechanisms: ['robotaxi-rollout', 'auto-insurers-squeezed'] }] },
-      byId,
+      { ...toThesisTree(draft, { id: 'd', emoji: '🤖', provenance, linksFor }), ifTrue: [{ id: 'x', claim: 'c', because: 'b', against: 'a', mechanisms: ['robotaxi-rollout', 'auto-insurers-squeezed'] }] },
+      linksFor,
     );
     expect(tree.ifTrue[0].bets?.map((b) => b.betId)).toEqual(['robotaxi-calls', 'insurer-puts']);
   });

@@ -2,7 +2,7 @@
 import type Anthropic from '@anthropic-ai/sdk';
 
 import { CATEGORY_ORDER } from '../src/domain/questionSelector';
-import { THESIS_DRAFT_SCHEMA, toThesisTree, validateDraft, type ThesisDraft } from '../src/domain/thesisDraft';
+import { THESIS_DRAFT_SCHEMA, toThesisTree, validateDraft, type LinkResolver, type ThesisDraft } from '../src/domain/thesisDraft';
 import type { EventQuestion, Mechanism, ThesisTree } from '../src/domain/types';
 
 /**
@@ -36,6 +36,8 @@ export interface DraftCatalog {
   mechanisms: Pick<Mechanism, 'id' | 'label' | 'description'>[];
   /** Tickers and company names the draft may not mention. */
   securities: string[];
+  /** Mechanism id -> the bets it leads to (domain/catalysts.ts#createLinkResolver). */
+  linksFor: LinkResolver;
 }
 
 export interface DraftOptions {
@@ -209,7 +211,7 @@ export async function draftThesis(
         draftedAt,
         review: { droppedCases: disputed.size, notes: review.notes },
       },
-      mechanisms: new Map(catalog.mechanisms.map((m) => [m.id, m as Mechanism])),
+      linksFor: catalog.linksFor,
     },
   );
 }

@@ -1,13 +1,5 @@
 import { CATEGORY_ORDER } from './questionSelector';
-import type {
-  Category,
-  ClaimCheck,
-  Mechanism,
-  ThesisPremise,
-  ThesisProvenance,
-  ThesisStep,
-  ThesisTree,
-} from './types';
+import type { Category, ClaimCheck, DraftProvenance, ThesisBetLink, ThesisPremise, ThesisStep, ThesisTree } from './types';
 
 /**
  * The firewall between an LLM and a thesis tree.
@@ -252,14 +244,15 @@ export function validateDraft(input: unknown, ctx: DraftContext): DraftValidatio
   return problems.length > 0 ? { ok: false, problems } : { ok: true, draft: d as unknown as ThesisDraft };
 }
 
+/** Mechanism id -> the bets it leads to. See domain/catalysts.ts#createLinkResolver. */
+export type LinkResolver = (mechanismId: string) => ThesisBetLink[];
+
 /** Fills each step's bets from the mechanisms it names. Content never sets bets directly. */
-export function resolveMechanisms(tree: ThesisTree, byId: Map<string, Mechanism>): ThesisTree {
+export function resolveMechanisms(tree: ThesisTree, linksFor: LinkResolver): ThesisTree {
   const resolve = (steps: ThesisStep[]): ThesisStep[] =>
     steps.map((step) => {
       const seen = new Set<string>();
-      const bets = (step.mechanisms ?? [])
-        .flatMap((m) => byId.get(m)?.bets ?? [])
-        .filter((b) => !seen.has(b.betId) && seen.add(b.betId));
+      const bets = (step.mechanisms ?? []).flatMap(linksFor).filter((b) => !seen.has(b.betId) && seen.add(b.betId));
       return { ...step, bets, ...(step.next ? { next: resolve(step.next) } : {}) };
     });
   return { ...tree, ifTrue: resolve(tree.ifTrue), ifFalse: resolve(tree.ifFalse) };
@@ -268,12 +261,12 @@ export function resolveMechanisms(tree: ThesisTree, byId: Map<string, Mechanism>
 export interface DraftToTreeOptions {
   id: string;
   emoji: string;
-  provenance: ThesisProvenance;
-  mechanisms: Map<string, Mechanism>;
+  provenance: DraftProvenance;
+  linksFor: LinkResolver;
 }
 
 /** A validated draft as a thesis tree, with bets resolved and nulls dropped. */
-export function toThesisTree(draft: ThesisDraft, { id, emoji, provenance, mechanisms }: DraftToTreeOptions): ThesisTree {
+export function toThesisTree(draft: ThesisDraft, { id, emoji, provenance, linksFor }: DraftToTreeOptions): ThesisTree {
   const checkOf = (c: DraftCheck | null): { check?: ClaimCheck } => (c ? { check: c } : {});
   const step = (s: DraftLeafStep | DraftStep): ThesisStep => ({
     id: s.id,
@@ -308,6 +301,6 @@ export function toThesisTree(draft: ThesisDraft, { id, emoji, provenance, mechan
       ifTrue: draft.ifTrue.map(step),
       ifFalse: draft.ifFalse.map(step),
     },
-    mechanisms,
+    linksFor,
   );
 }

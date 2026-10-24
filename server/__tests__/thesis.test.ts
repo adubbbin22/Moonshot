@@ -8,12 +8,15 @@ import { BETS } from '@/data/bets';
 import { DRAFT_FIXTURE } from '@/data/draftFixture';
 import { EVENTS } from '@/data/events';
 import { MECHANISMS } from '@/data/mechanisms';
+import { UNDERLYINGS } from '@/data/underlyings';
+import { createLinkResolver } from '@/domain/catalysts';
 import { allSteps } from '@/domain/thesisTree';
 
 const catalog = {
   questions: EVENTS,
   mechanisms: MECHANISMS,
   securities: BETS.flatMap((b) => [b.strategy.underlying, b.strategy.underlyingName]),
+  linksFor: createLinkResolver(MECHANISMS, UNDERLYINGS, BETS),
 };
 
 const usage = { input_tokens: 1, output_tokens: 1 } as Anthropic.Usage;

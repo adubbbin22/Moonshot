@@ -202,10 +202,23 @@ _Built in the prototype without the LLM (October 2026), in `src/app/thesis/`:_
   first draft of "your why".
 - Calls on feed questions fill in matching claims ("from your call"), and
   takes and questions link to the tree they belong to.
-- **The mechanism library is real** (`src/data/mechanisms.ts`): fifteen
-  curated links from something happening in the world to the bets that pay
-  if it does. A thesis step names mechanisms by id; code resolves them to
-  bets. It's the only way any thesis, curated or drafted, reaches a bet.
+- **The framework for each security** (`src/data/underlyings.ts`): what it
+  is, what it moves on, and a **catalyst map**. Each catalyst has a direction
+  (up or down), a kind (demand, pricing, costs, rates, policy, event,
+  competition, sentiment), timing (on the news, or over quarters), the chain
+  from the event to the price, what to watch, and the feed questions that
+  test it. Every map runs both ways, and ends with the ways to lose even
+  when the world goes your way. A bet is a direction on a symbol, so code
+  derives which bets ride which catalysts; nothing links a bet by hand. The
+  stock screen shows the map, every bet screen shows what the bet rides and
+  bets against, and a question shows the stocks it moves.
+- **The mechanism library** (`src/data/mechanisms.ts`): fifteen curated links
+  from something happening in the world to the catalysts it sets off. A
+  thesis step names mechanisms by id; code follows each catalyst's direction
+  to the bets that express it. It's the only way any thesis, curated or
+  drafted, reaches a bet, and the only place in the chain from a belief to a
+  trade that names a security is the catalyst map itself, which people
+  approve.
 - **An LLM drafts trees from the user's own belief**, on the server, inside
   the firewall (`src/domain/thesisDraft.ts`, `server/thesis.ts`):
   1. *Draft.* The model restates the belief as a claim with a settle date,
@@ -226,9 +239,16 @@ _Built in the prototype without the LLM (October 2026), in `src/app/thesis/`:_
   has the same shape as a curated one, plus provenance, and the screens say
   so: "Drafted by AI from your belief", sources under each case, and a note
   that the cases haven't been checked by a person.
-- Not built yet: checkpoint questions per step, a human review queue that
-  promotes good drafted trees to the curated set, and a web-search pass so
-  the reviewer checks sources rather than its own memory.
+- **An LLM drafts the framework for a new symbol** (`server/profile.ts`,
+  `npm run draft-profile -- AMD`). This is the one place the model is meant
+  to name the company. It still writes no numbers, no price targets and no
+  advice, and the map must run both ways; code checks all of it, the draft
+  lands in a review folder, and a person approves it before it enters the
+  library. That's how the catalog grows past seventeen names without
+  hand-writing each one.
+- Not built yet: checkpoint questions per step, a human review queue in the
+  product (today it's a folder), and a web-search pass so the reviewer
+  checks sources rather than its own memory.
 
 What it does:
 1. **Restate:** the user's belief ("the Gulf stays a mess") becomes a claim
@@ -557,6 +577,9 @@ likely with NFA registration, and no sports, elections or war.
   step with bets.
 - The mechanism library, and LLM-drafted thesis trees from the user's own
   belief (draft → review → validate, on the server, inside the firewall).
+- The framework for each security: catalyst maps for all seventeen names,
+  mechanisms re-pointed at catalysts, the stock screen, and an LLM profile
+  drafter for new symbols with human approval.
 - Copy fixes: "Wrong: lose what you paid", "Expect most to expire worthless.
   Size them so that's fine."
 

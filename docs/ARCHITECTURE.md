@@ -58,13 +58,21 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
   to spot (e.g. buy 1.30×, sell 1.33×) and a minimum days-to-expiry. Each time
   a bet is shown, it's priced against today's chain, so the catalog never
   goes stale.
+- **The framework for each security** lives in `data/underlyings.ts`: an
+  `UnderlyingProfile` per symbol with its catalyst map. `domain/catalysts.ts`
+  turns that into bets: a bet's direction comes from its structure
+  (`betDirection`), the bets that express a catalyst are every bet on the
+  symbol in its direction (`betsExpressing`), and a bet's `catalystsRidden`
+  and `catalystsAgainst` are read off the map. `catalystsCheckedBy` links a
+  feed question to the stocks it moves.
 - **The mechanism library** (`data/mechanisms.ts`) is the only way a thesis
-  reaches a bet. Each mechanism is a curated link from something happening
-  in the world to bets, each with a why. Thesis steps name mechanisms by id;
-  `domain/thesisDraft.ts#resolveMechanisms` fills in the bets when the
-  catalog loads. The user's ratings live in the store, never in the content,
-  and `components/BetExpressions.tsx` renders the same filtered,
-  expiry-ordered bet list for thesis steps and for calls.
+  reaches a bet. Each mechanism is something happening in the world and the
+  catalysts it sets off. `createLinkResolver` follows each catalyst's
+  direction to bets, with the catalyst's why; thesis steps name mechanisms
+  by id and `domain/thesisDraft.ts#resolveMechanisms` fills in the bets when
+  the catalog loads. The user's ratings live in the store, never in the
+  content, and `components/BetExpressions.tsx` renders the same filtered,
+  expiry-ordered bet list for thesis steps, calls and the stock screen.
 - **Thesis trees come from two places with one shape.** `data/theses.ts`
   holds the five curated trees. Drafted trees come from an LLM through
   `services/intelligence/thesisDrafter.ts`, which never runs a model in the
@@ -78,6 +86,13 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
   company name, unknown mechanism or question ids, cases without sources,
   and stories that break no real part, and returns every problem so they can
   go back to the model. `toThesisTree` turns a valid draft into a tree.
+- **`server/profile.ts`** drafts the framework for a symbol with the same
+  SDK: one structured-output call, `validateProfileDraft` (no numbers, no
+  advice, both directions, real questions), one retry. `npm run
+  draft-profile -- AMD` writes the result to `server/drafts/AMD.json` for a
+  person to review and paste into `data/underlyings.ts`, where the integrity
+  tests hold it to the same rules. Drafted profiles never reach the app
+  unreviewed.
 - **`server/thesis.ts`** runs the pipeline with the Anthropic SDK: a draft
   call with the system prompt (mechanism library, feed questions, the rules)
   cached across requests, a review call that gives each past case a verdict

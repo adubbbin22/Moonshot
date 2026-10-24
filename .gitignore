@@ -43,5 +43,6 @@ example
 /ios
 /android
 
-# Audit log of model outputs from the demo server
+# Audit log of model outputs from the demo server, and drafts awaiting review
 server/logs/
+server/drafts/

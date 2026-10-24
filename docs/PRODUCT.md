@@ -85,6 +85,7 @@ record are next.
 | Onboarding | Philosophy, how it works, budget picker ($100–$1,000/mo), disclaimer |
 | Feed | 5 sample event questions; each linked bet shows live cost, max payout and market odds |
 | Thesis | 5 curated trees, plus trees drafted by Claude from the user's own belief (server-side, inside the firewall): gut check and outside view → parts → pre-mortem → "which means…" steps with "then what?" → bets via the mechanism library. Code multiplies the ratings |
+| Stocks | 17 underlying profiles: what it is, catalyst map (up and down, kind, timing, what to watch, the questions that test it), ways to lose anyway. Stock screen; every bet shows what it rides |
 | Bet ideas | 17 strategy templates (strikes relative to spot, minimum days to expiry) priced against the chain |
 | Bet screen | Exact legs, payoff diagram, market-odds ladder, contract picker within budget, kill criteria, "your why" |
 | Portfolio | Total at risk, "if your best one hits", positions with legs, breakeven, thesis |

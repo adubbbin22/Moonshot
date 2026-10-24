@@ -46,7 +46,8 @@ Docs: https://docs.expo.dev/eas/index.md
 - Every bet is a long option or a debit spread: defined risk, at least 3x payoff. `validateStructure` and `isAsymmetric` enforce this; keep them tested.
 - Prices only come through `src/services/marketData/` (see `docs/DATA.md`). Never ship vendor API keys in the app bundle.
 - `server/` is the demo server (Node, run with `npm run market-data`): Yahoo Finance chains and Claude thesis drafting. Keep `yahoo-finance2` and `@anthropic-ai/sdk` out of app code under `src/`; the app only talks to the server.
-- LLM output reaches the app only through `src/domain/thesisDraft.ts`: the model picks mechanisms from `src/data/mechanisms.ts` by id and never names a security, a price or a trade. Keep `validateDraft` tested.
+- Every bet's underlying has a profile in `src/data/underlyings.ts` (what it is, its catalyst map, both directions). Mechanisms in `src/data/mechanisms.ts` point at catalysts, never at bets; `src/domain/catalysts.ts` derives bets from a catalyst's direction.
+- LLM output reaches the app only through `src/domain/thesisDraft.ts`: the model picks mechanisms by id and never names a security, a price or a trade. Drafted profiles (`server/profile.ts`) go to `server/drafts/` for human review, never straight into the app. Keep `validateDraft` and `validateProfileDraft` tested.
 - Business rules live in `src/domain/` (pure TS, unit tested); screens stay thin.
 - Content reads go through `src/services/catalog.ts`; orders go through the `Broker` interface in `src/services/broker.ts`.
 - Sample content lives in `src/data/`; `src/data/__tests__/integrity.test.ts` must pass after any content change.

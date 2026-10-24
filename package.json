@@ -11,7 +11,8 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "market-data": "tsx server/index.ts"
+    "market-data": "tsx server/index.ts",
+    "draft-profile": "tsx server/draft-profile.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",

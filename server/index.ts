@@ -7,11 +7,14 @@ import Anthropic from '@anthropic-ai/sdk';
 import YahooFinance from 'yahoo-finance2';
 
 import { createMarketDataServer } from './app';
+import { draftProfile } from './profile';
 import { draftThesis } from './thesis';
 import { createYahooChainSource, type YahooOptionsResult } from './yahoo';
 import { BETS } from '../src/data/bets';
 import { EVENTS } from '../src/data/events';
 import { MECHANISMS } from '../src/data/mechanisms';
+import { UNDERLYINGS } from '../src/data/underlyings';
+import { createLinkResolver } from '../src/domain/catalysts';
 
 /**
  * Demo server: market data from Yahoo Finance, and thesis drafting with Claude.
@@ -24,7 +27,8 @@ import { MECHANISMS } from '../src/data/mechanisms';
  * Thesis drafting turns on when the Anthropic SDK finds credentials
  * (ANTHROPIC_API_KEY, or a profile from `ant auth login`); start the app with
  * EXPO_PUBLIC_INTELLIGENCE=proxy. Every model output is appended to
- * server/logs/thesis-drafts.jsonl, the audit log the firewall calls for.
+ * server/logs/*.jsonl, the audit log the firewall calls for. Drafting the
+ * framework for a new symbol is for editors: see draft-profile.ts.
  */
 
 const port = Number(process.env.PORT ?? 8787);
@@ -48,20 +52,27 @@ const draftCatalog = {
   questions: EVENTS,
   mechanisms: MECHANISMS,
   securities: BETS.flatMap((b) => [b.strategy.underlying, b.strategy.underlyingName]),
+  linksFor: createLinkResolver(MECHANISMS, UNDERLYINGS, BETS),
 };
 let anthropic: Anthropic | undefined;
+
+const audit = (file: string) => (record: object) => {
+  mkdirSync(auditDir, { recursive: true });
+  appendFileSync(join(auditDir, file), `${JSON.stringify({ at: new Date().toISOString(), ...record })}\n`);
+};
 
 const server = createMarketDataServer(loadChain, {
   log,
   draftThesis: hasModelCredentials
     ? (belief) => {
         anthropic ??= new Anthropic();
-        return draftThesis(anthropic, belief, draftCatalog, {
-          audit: (record) => {
-            mkdirSync(auditDir, { recursive: true });
-            appendFileSync(join(auditDir, 'thesis-drafts.jsonl'), `${JSON.stringify({ at: new Date().toISOString(), ...record })}\n`);
-          },
-        });
+        return draftThesis(anthropic, belief, draftCatalog, { audit: audit('thesis-drafts.jsonl') });
+      }
+    : undefined,
+  draftProfile: hasModelCredentials
+    ? (symbol) => {
+        anthropic ??= new Anthropic();
+        return draftProfile(anthropic, symbol, { questions: EVENTS }, { audit: audit('profile-drafts.jsonl') });
       }
     : undefined,
 });
@@ -76,7 +87,7 @@ server.listen(port, '0.0.0.0', () => {
   console.log(`Try: http://localhost:${port}/chains/NVDA?minExpiration=2027-12-01`);
   console.log(
     hasModelCredentials
-      ? 'Thesis drafting: on (POST /thesis/draft). Start the app with EXPO_PUBLIC_INTELLIGENCE=proxy.'
+      ? 'Drafting: on (POST /thesis/draft, POST /underlyings/draft). Start the app with EXPO_PUBLIC_INTELLIGENCE=proxy.'
       : 'Thesis drafting: off. Set ANTHROPIC_API_KEY (or run `ant auth login`) to turn it on.',
   );
 });

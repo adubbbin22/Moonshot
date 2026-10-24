@@ -4,6 +4,7 @@ import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
 
 import { OutcomeLadder } from '@/components/OutcomeLadder';
 import { PayoffDiagram } from '@/components/PayoffDiagram';
+import { WhatMovesIt } from '@/components/stock/WhatMovesIt';
 import { ReasoningCard } from '@/components/thesis/ReasoningCard';
 import { Button, Card, Chip, Screen, Stat, StatRow, Text } from '@/components/ui';
 import { contractOptions, maxStakePerBet, stakeCeiling } from '@/domain/sizing';
@@ -93,6 +94,8 @@ export default function BetScreen() {
           marketOdds={pricing.status === 'ready' ? impliedOdds(pricing.priced).value : undefined}
         />
       ) : null}
+
+      <WhatMovesIt bet={bet} />
 
       {pricing.status === 'loading' ? (
         <Card style={styles.center}>

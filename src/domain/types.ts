@@ -153,18 +153,67 @@ export interface ThesisBetLink {
   why: string;
 }
 
+export type Direction = 'up' | 'down';
+
+/** What kind of lever a catalyst pulls on the price. */
+export type CatalystKind = 'demand' | 'pricing' | 'costs' | 'rates' | 'policy' | 'event' | 'competition' | 'sentiment';
+
+/** Whether the price moves when the news lands, or as the results show up quarter by quarter. */
+export type CatalystTiming = 'on-the-news' | 'over-quarters';
+
 /**
- * A curated link from the world to the market: the last step from a claim
- * to the bets that express it. The mechanism library is the only way a
- * thesis reaches a bet, so an LLM drafting a thesis picks a mechanism by id
- * and never names a security.
+ * One thing that moves a security's price, and how. The framework for a
+ * stock is its catalyst map: every bet on it rides one of these.
+ */
+export interface Catalyst {
+  id: string;
+  label: string;
+  /** What happens to the price if this fires. */
+  direction: Direction;
+  kind: CatalystKind;
+  timing: CatalystTiming;
+  /** The chain from the event to the price: revenue, margins, the multiple, or flows. No numbers. */
+  why: string;
+  /** Observable signs it's firing. */
+  watch: string[];
+  /** Feed questions that test it. */
+  checks?: ClaimCheck[];
+}
+
+/** A security as the app understands it: what it is, and what moves it. */
+export interface UnderlyingProfile {
+  symbol: string;
+  name: string;
+  kind: 'stock' | 'etf' | 'commodity';
+  /** For someone who has never heard of it. */
+  whatItIs: string;
+  /** What the price mostly responds to, in one line. */
+  movesOn: string;
+  catalysts: Catalyst[];
+  /** Ways to lose even when the world goes your way. */
+  risks: string[];
+  provenance?: DraftProvenance;
+}
+
+/** A catalyst on a specific security. */
+export interface CatalystRef {
+  symbol: string;
+  catalyst: string;
+}
+
+/**
+ * A curated link from the world to the market: something happening in the
+ * world, and the catalysts it sets off. Code turns catalysts into bets
+ * (direction on a symbol), so neither a thesis nor the LLM that drafts one
+ * ever names a security. The mechanism library is the only way a thesis
+ * reaches a bet.
  */
 export interface Mechanism {
   id: string;
   label: string;
-  /** What has to be happening in the world for this to pay. Written for whoever (or whatever) picks mechanisms. */
+  /** What has to be happening in the world for this to fire. Written for whoever (or whatever) picks mechanisms. */
   description: string;
-  bets: ThesisBetLink[];
+  catalysts: CatalystRef[];
 }
 
 /** A "which means…" step: what follows if the step before it is true. */
@@ -217,10 +266,10 @@ export interface FailureStory {
   signal: string;
 }
 
-/** Where a thesis tree came from. Curated trees have none. */
-export interface ThesisProvenance {
+/** Where drafted content came from. Curated content has none. */
+export interface DraftProvenance {
   kind: 'drafted';
-  /** The belief in the user's own words. */
+  /** What the model was asked for: the belief in the user's own words, or a symbol. */
   prompt: string;
   model: string;
   draftedAt: string;
@@ -239,7 +288,7 @@ export interface ThesisProvenance {
  */
 export interface ThesisTree {
   id: string;
-  provenance?: ThesisProvenance;
+  provenance?: DraftProvenance;
   title: string;
   /** The question that opens it: "Do you believe in AI?" */
   hook: string;

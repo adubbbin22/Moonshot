@@ -31,6 +31,10 @@ own it and what would prove you wrong.
 
   Code multiplies your ratings, so you see when the whole belief is less
   likely than it felt.
+- **The framework for each stock:** every security has a catalyst map, what
+  pushes it up, what pushes it down, how fast, and what to watch, plus the
+  ways to lose even if you're right about the world. Every bet shows which
+  catalysts it rides, and every question shows the stocks it moves.
 - **Your own belief:** type what you think happens, and a model drafts the
   tree for you to reason through. The model writes the reasoning and picks
   from a curated library of world-to-market mechanisms; it never names a
@@ -110,6 +114,7 @@ draft so the flow can be demoed offline.
 | `npm start`         | Expo dev server                      |
 | `npm run web`       | Run in the browser                   |
 | `npm run market-data` | Demo server on :8787: market data (Yahoo Finance) and thesis drafting (Claude) |
+| `npm run draft-profile -- AMD` | Draft the catalyst map for a symbol with Claude, into `server/drafts/` for review |
 | `npm test`          | Jest unit tests (domain, data, state) |
 | `npm run typecheck` | `tsc --noEmit`                       |
 | `npm run lint`      | ESLint via `expo lint`               |
@@ -132,6 +137,7 @@ src/
     event/[id].tsx     A question: how it resolves, your call, bets for each side
     thesis/[id].tsx    Thesis tree: gut check → break it down → pre-mortem → what follows → bets
     thesis/draft.tsx   Your own belief → a drafted tree
+    stock/[symbol]     The framework for a security: catalyst map, bets, risks
     bet/[id].tsx       Bet detail: legs, payoff, market odds, contracts, place (paper)
   domain/              Pure TypeScript: Black-Scholes and implied odds,
                        option legs and payoffs, strategy pricing, sizing,
@@ -139,8 +145,8 @@ src/
                        selector, horizon guard, thesis-tree chain math.
                        No React. Fully unit tested.
   data/                Sample questions (with resolution rules), bet
-                       templates, thesis trees, the mechanism library
-                       (+ integrity tests)
+                       templates, underlying profiles (catalyst maps),
+                       the mechanism library, thesis trees (+ integrity tests)
   services/            catalog, marketData (synthetic | alpaca | proxy),
                        pricing cache, broker (paper, multi-leg orders),
                        intelligence/narrator (take profile → plain English),

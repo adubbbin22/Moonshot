@@ -2,6 +2,8 @@ import { BETS } from '../bets';
 import { EVENTS } from '../events';
 import { MECHANISMS } from '../mechanisms';
 import { THESES } from '../theses';
+import { UNDERLYINGS } from '../underlyings';
+import { betsExpressing, createLinkResolver } from '@/domain/catalysts';
 import { earliestExpiration, outlivesQuestion } from '@/domain/horizon';
 import { isSpread } from '@/domain/options';
 import { CATEGORY_ORDER } from '@/domain/questionSelector';
@@ -18,6 +20,8 @@ import { listedExpirations, SYNTHETIC_UNDERLYINGS, syntheticChain } from '@/serv
 const betIds = new Set(BETS.map((b) => b.id));
 const eventIds = new Set(EVENTS.map((e) => e.id));
 const mechanismIds = new Set(MECHANISMS.map((m) => m.id));
+const underlyingsBySymbol = new Map(UNDERLYINGS.map((u) => [u.symbol, u]));
+const linksFor = createLinkResolver(MECHANISMS, UNDERLYINGS, BETS);
 // Prices, strikes, odds and multiples come from code, never from copy.
 const PRICE_LIKE = /[$%]|\d+(\.\d+)?x\b|\d+(\.\d+)?\s*(times|percent)\b/i;
 const now = new Date('2026-10-24T15:00:00.000Z');
@@ -165,7 +169,7 @@ describe('thesis trees', () => {
   });
 
   it.each(THESES.map((t) => [t.id, t] as const))('%s leads to at least one bet once mechanisms resolve', (_id, tree) => {
-    const resolved = resolveMechanisms(tree, new Map(MECHANISMS.map((m) => [m.id, m])));
+    const resolved = resolveMechanisms(tree, linksFor);
     expect(allSteps(resolved).some((s) => (s.bets ?? []).length > 0)).toBe(true);
   });
 
@@ -180,20 +184,57 @@ describe('mechanisms', () => {
     expect(duplicates(MECHANISMS.map((m) => m.id))).toEqual([]);
   });
 
-  it.each(MECHANISMS.map((m) => [m.id, m] as const))('%s describes the world and links real bets with a why and no prices', (_id, mechanism) => {
+  it.each(MECHANISMS.map((m) => [m.id, m] as const))('%s describes the world and points at catalysts that exist and lead to bets', (_id, mechanism) => {
     expect(mechanism.label.trim()).not.toBe('');
     expect(mechanism.description.trim()).not.toBe('');
     expect(mechanism.description).not.toMatch(PRICE_LIKE);
-    expect(mechanism.bets.length).toBeGreaterThan(0);
-    for (const link of mechanism.bets) {
-      expect(betIds.has(link.betId)).toBe(true);
-      expect(link.why.trim()).not.toBe('');
-      expect(link.why).not.toMatch(PRICE_LIKE);
+    expect(mechanism.catalysts.length).toBeGreaterThan(0);
+    for (const ref of mechanism.catalysts) {
+      const catalyst = underlyingsBySymbol.get(ref.symbol)?.catalysts.find((c) => c.id === ref.catalyst);
+      expect(catalyst).toBeDefined();
+      expect(betsExpressing(BETS, ref.symbol, catalyst!.direction).length).toBeGreaterThan(0);
     }
+    expect(linksFor(mechanism.id).length).toBeGreaterThan(0);
   });
 
   it('give every bet in the catalog a line of reasoning', () => {
-    const reachable = new Set(MECHANISMS.flatMap((m) => m.bets.map((b) => b.betId)));
+    const reachable = new Set(MECHANISMS.flatMap((m) => linksFor(m.id).map((b) => b.betId)));
     expect(BETS.map((b) => b.id).filter((id) => !reachable.has(id))).toEqual([]);
+  });
+});
+
+describe('underlying profiles', () => {
+  it('have unique symbols and cover every bet’s underlying', () => {
+    expect(duplicates(UNDERLYINGS.map((u) => u.symbol))).toEqual([]);
+    const missing = BETS.map((b) => b.strategy.underlying).filter((s) => !underlyingsBySymbol.has(s));
+    expect([...new Set(missing)]).toEqual([]);
+  });
+
+  it.each(UNDERLYINGS.map((u) => [u.symbol, u] as const))('%s says what it is and what moves it, with no prices or advice', (_symbol, profile) => {
+    expect(profile.name.trim()).not.toBe('');
+    for (const text of [profile.whatItIs, profile.movesOn, ...profile.risks]) {
+      expect(text.trim()).not.toBe('');
+      expect(text).not.toMatch(PRICE_LIKE);
+      expect(text).not.toMatch(/\bshould\b/i);
+    }
+    expect(profile.risks.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it.each(UNDERLYINGS.map((u) => [u.symbol, u] as const))('%s has a catalyst map that runs both ways, each with a why, signals and real questions', (_symbol, profile) => {
+    expect(profile.catalysts.length).toBeGreaterThanOrEqual(3);
+    expect(duplicates(profile.catalysts.map((c) => c.id))).toEqual([]);
+    expect(new Set(profile.catalysts.map((c) => c.direction))).toEqual(new Set(['up', 'down']));
+    for (const catalyst of profile.catalysts) {
+      expect(catalyst.label.trim()).not.toBe('');
+      expect(catalyst.why.trim()).not.toBe('');
+      expect(catalyst.why).not.toMatch(PRICE_LIKE);
+      expect(catalyst.why).not.toMatch(/\bshould\b/i);
+      expect(catalyst.watch.length).toBeGreaterThan(0);
+      for (const check of catalyst.checks ?? []) expect(eventIds.has(check.questionId)).toBe(true);
+    }
+  });
+
+  it.each(UNDERLYINGS.map((u) => [u.symbol, u] as const))('%s has at least one bet riding one of its catalysts', (symbol, profile) => {
+    expect(profile.catalysts.some((c) => betsExpressing(BETS, symbol, c.direction).length > 0)).toBe(true);
   });
 });

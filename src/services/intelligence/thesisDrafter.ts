@@ -80,7 +80,7 @@ export function createFixtureDrafter(delayMs = 1200, now: () => Date = () => new
         id: `draft-fixture-${draftedAt.replace(/\D/g, '').slice(0, 14)}`,
         emoji: CATEGORY_EMOJI[result.draft.category],
         provenance: { kind: 'drafted', prompt: belief.trim(), model: 'fixture', draftedAt },
-        mechanisms: catalog.mechanismsById(),
+        linksFor: catalog.mechanismLinks,
       });
     },
   };

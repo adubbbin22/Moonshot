@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { BetCard } from '@/components/BetCard';
 import { ResolutionNote } from '@/components/ResolutionNote';
+import { MovesStocks } from '@/components/stock/MovesStocks';
 import { ReasonItThrough } from '@/components/thesis/ReasonItThrough';
 import { Button, Card, Chip, Screen, Text } from '@/components/ui';
 import type { Side } from '@/domain/types';
@@ -90,6 +91,7 @@ export default function EventScreen() {
         />
       ))}
 
+      <MovesStocks questionId={event.id} />
       <ReasonItThrough questionId={event.id} />
     </Screen>
   );
