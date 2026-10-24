@@ -4,6 +4,7 @@ import { Button, Card, Text } from '@/components/ui';
 import { outlivesQuestion } from '@/domain/horizon';
 import { impliedOdds } from '@/domain/strategy';
 import type { Call, EventQuestion } from '@/domain/types';
+import { usePredictionQuotes } from '@/hooks/usePredictionQuotes';
 import { usePricedBet } from '@/hooks/usePricedBet';
 import { formatDate, formatPercent } from '@/lib/format';
 import { strikesLabel } from '@/lib/strategyText';
@@ -55,6 +56,7 @@ export function RevealCard({ question, call, nextLabel, onNext }: RevealCardProp
           Shows after {CROWD_MINIMUM} calls
         </Text>
       </View>
+      <PredictionLine question={question} side={call.side} />
 
       {linkedBet ? (
         <LinkedBet betId={linkedBet.id} question={question} />
@@ -67,6 +69,23 @@ export function RevealCard({ question, call, nextLabel, onNext }: RevealCardProp
 
       <Button label={nextLabel} onPress={onNext} />
     </Card>
+  );
+}
+
+/** One line of prediction-market odds for the side the user took. */
+function PredictionLine({ question, side }: { question: EventQuestion; side: Call['side'] }) {
+  const state = usePredictionQuotes(question);
+  if (state.status !== 'ready' || state.quotes.length === 0) return null;
+  const label = (venue: string) => (venue === 'kalshi' ? 'Kalshi' : 'Polymarket');
+  const sample = state.quotes.some((q) => q.basis === 'sample');
+  return (
+    <View style={styles.row}>
+      <Text variant="label">Prediction markets</Text>
+      <Text variant="caption" tone="faint">
+        {state.quotes.map((q) => `${label(q.venue)} ${formatPercent(side === 'yes' ? q.yes : 1 - q.yes)}`).join(' · ')}
+        {sample ? ' (sample)' : ''}
+      </Text>
+    </View>
   );
 }
 

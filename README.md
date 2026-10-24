@@ -35,6 +35,16 @@ own it and what would prove you wrong.
   pushes it up, what pushes it down, how fast, and what to watch, plus the
   ways to lose even if you're right about the world. Every bet shows which
   catalysts it rides, and every question shows the stocks it moves.
+- **More than one way in:** every idea comes in three shapes, priced side by
+  side: a capped spread, an aggressive spread further out (cheaper, bigger
+  multiple, lower odds) and an uncapped long option.
+- **Simulated returns:** thousands of runs of your open bets to expiry, at the
+  market's odds or at yours, and "if you made this bet 10 times" on every
+  bet. Most moonshots expire worthless; this shows what the set looks like.
+- **Prediction markets:** Kalshi and Polymarket odds next to each question,
+  the gap between the venues (an arbitrage before fees), and how often the
+  stock would have to follow the event for the options bet to be fairly
+  priced. Sample odds by default; live ones through the demo server.
 - **Your own belief:** type what you think happens, and a model drafts the
   tree for you to reason through. The model writes the reasoning and picks
   from a curated library of world-to-market mechanisms; it never names a
@@ -106,6 +116,15 @@ EXPO_PUBLIC_INTELLIGENCE=fixture node scripts/export-web-hosted.js   # → dist-
 and patches the route loader so the folder works from a subpath or a hosted
 page. Serve the folder and open `index.html`.
 
+### Live prediction-market odds
+
+The demo server fetches Kalshi and Polymarket quotes for the markets listed
+on each question (`markets` in `src/data/events.ts`: a Kalshi ticker or a
+Polymarket slug). Start the app with `EXPO_PUBLIC_PREDICTION_MARKETS=proxy`.
+`GET /odds/search?q=…` on the server finds Polymarket slugs; Kalshi tickers
+come from kalshi.com. Without a mapping, questions show no live odds; the
+default `sample` mode shows made-up quotes labelled as such.
+
 ### Draft a thesis from your own belief (Claude)
 
 The same demo server drafts thesis trees when the Anthropic SDK finds
@@ -149,17 +168,20 @@ src/
     thesis/[id].tsx    Thesis tree: gut check → break it down → pre-mortem → what follows → bets
     thesis/draft.tsx   Your own belief → a drafted tree
     stock/[symbol]     The framework for a security: catalyst map, bets, risks
+    simulate.tsx       Monte Carlo of your open bets, market odds vs yours
     bet/[id].tsx       Bet detail: legs, payoff, market odds, contracts, place (paper)
   domain/              Pure TypeScript: Black-Scholes and implied odds,
-                       option legs and payoffs, strategy pricing, sizing,
-                       thesis engine, calls and take profile, question
-                       selector, horizon guard, thesis-tree chain math.
+                       option legs and payoffs, strategy pricing and shapes,
+                       sizing, calls and take profile, question selector,
+                       horizon guard, thesis-tree chain math, catalysts,
+                       returns simulation, prediction-market arbitrage.
                        No React. Fully unit tested.
   data/                Sample questions (with resolution rules), bet
                        templates, underlying profiles (catalyst maps),
                        the mechanism library, thesis trees (+ integrity tests)
   services/            catalog, marketData (synthetic | alpaca | proxy),
-                       pricing cache, broker (paper, multi-leg orders),
+                       predictionMarkets (sample | proxy), pricing cache,
+                       broker (paper, multi-leg orders),
                        intelligence/narrator (take profile → plain English),
                        intelligence/thesisDrafter (belief → tree, via the backend)
   hooks/               usePricedBet(s), useTakeProfile, useNarrative,

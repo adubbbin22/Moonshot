@@ -4,6 +4,8 @@ import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
 
 import { OutcomeLadder } from '@/components/OutcomeLadder';
 import { PayoffDiagram } from '@/components/PayoffDiagram';
+import { RepeatBetCard } from '@/components/RepeatBetCard';
+import { ShapeLadder } from '@/components/ShapeLadder';
 import { WhatMovesIt } from '@/components/stock/WhatMovesIt';
 import { ReasoningCard } from '@/components/thesis/ReasoningCard';
 import { Button, Card, Chip, Screen, Stat, StatRow, Text } from '@/components/ui';
@@ -44,6 +46,14 @@ export default function BetScreen() {
   const question = params.eventId ? catalog.getEvent(params.eventId) : undefined;
   const pricing = usePricedBet(bet, question);
   const reasoning = useReasoning(params.id, params.thesisId, params.stepId);
+  const call = useAppState().calls.find((c) => c.questionId === params.eventId);
+  // The user's own chance this bet pays: their chain through a thesis, or their call on the question.
+  const yours =
+    reasoning?.chain !== undefined
+      ? { odds: reasoning.chain, label: 'your chain' }
+      : call && params.side
+        ? { odds: call.side === params.side ? call.probability : 1 - call.probability, label: 'your call' }
+        : undefined;
   const [result, setResult] = useState<PlaceBetResult | null>(null);
 
   if (!bet) {
@@ -95,6 +105,7 @@ export default function BetScreen() {
         />
       ) : null}
 
+      <ShapeLadder bet={bet} question={question} params={params} />
       <WhatMovesIt bet={bet} />
 
       {pricing.status === 'loading' ? (
@@ -123,6 +134,7 @@ export default function BetScreen() {
           params={params}
           reasoningText={reasoning?.text}
           killCriteria={reasoning?.killCriteria}
+          yours={yours}
           onPlaced={setResult}
           lastResult={result}
         />
@@ -137,6 +149,7 @@ function PricedBet({
   params,
   reasoningText,
   killCriteria,
+  yours,
   onPlaced,
   lastResult,
 }: {
@@ -147,6 +160,8 @@ function PricedBet({
   reasoningText?: string;
   /** Saved with the position so the user can check them later. */
   killCriteria?: string[];
+  /** The user's own odds for this bet, for the repeat simulation. */
+  yours?: { odds: number; label: string };
   onPlaced: (result: PlaceBetResult) => void;
   lastResult: PlaceBetResult | null;
 }) {
@@ -251,6 +266,8 @@ function PricedBet({
         </Text>
         <OutcomeLadder underlying={priced.underlying} outcomes={priced.outcomes} contracts={contracts} />
       </Card>
+
+      <RepeatBetCard priced={priced} contracts={contracts} yours={yours} />
 
       <Card>
         <Text variant="label" tone="muted">

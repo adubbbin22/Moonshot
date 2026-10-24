@@ -580,6 +580,14 @@ likely with NFA registration, and no sports, elections or war.
 - The framework for each security: catalyst maps for all seventeen names,
   mechanisms re-pointed at catalysts, the stock screen, and an LLM profile
   drafter for new symbols with human approval.
+- Three shapes per idea (capped, aggressive, uncapped), priced side by side.
+- Simulated returns: Monte Carlo of open bets at the market's odds or the
+  user's, and "ten of these" on every bet.
+- Prediction-market odds (Kalshi, Polymarket) on every question, the venue
+  gap as an arbitrage before fees, and the event-vs-options comparison: how
+  often the stock must follow the event for the options price to be fair.
+  Sample odds in the prototype; live quotes through the server for mapped
+  markets.
 - Copy fixes: "Wrong: lose what you paid", "Expect most to expire worthless.
   Size them so that's fine."
 

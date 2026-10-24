@@ -54,6 +54,27 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
       (resolution date + 30 days).
     - `expression.ts`: views → linked bets, and whether each priced bet fits
       (`ok`, `too-short`, `not-asymmetric`, `over-limit`).
+- **One idea, three shapes.** `domain/structures.ts` derives a capped
+  spread, an aggressive spread (further out) and an uncapped long option
+  from each base template. Derived shapes have ids like
+  `oil-calls~aggressive`; `catalog.getBet` resolves them and
+  `catalog.ladderFor` lists a bet's siblings, so positions and routes work
+  on any shape. Lists expand each idea into its ladder and filter every
+  shape by the same rules.
+- **Simulated returns** (`domain/simulate.ts`): a seeded Monte Carlo that
+  draws each underlying's price at expiry from the lognormal distribution
+  its implied volatility defines, so "market" mode reproduces the options
+  odds; "yours" mode keeps the distribution but lands each bet past
+  breakeven as often as the user said (their call or their thesis chain,
+  via `hooks/useYourOdds`). `repeatBet` is the same bet n times as a
+  binomial. Deterministic for a seed; tested against the analytic odds.
+- **Prediction markets** (`services/predictionMarkets/`, `domain/arbitrage.ts`):
+  quotes come from our backend (`proxy`) or are samples; the app never calls
+  a venue. `venueArbitrage` prices YES at one venue plus NO at the other
+  (any gap is an edge before fees; `ESTIMATED_FEES` decides if it survives),
+  and `eventVsOptions` turns the pair of event odds and options odds into
+  the link the options price assumes: how often the stock must follow the
+  event. The two claims are kept apart in the copy.
 - **Bets are templates, not trades.** `data/bets.ts` stores strikes relative
   to spot (e.g. buy 1.30×, sell 1.33×) and a minimum days-to-expiry. Each time
   a bet is shown, it's priced against today's chain, so the catalog never
@@ -86,6 +107,12 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
   company name, unknown mechanism or question ids, cases without sources,
   and stories that break no real part, and returns every problem so they can
   go back to the model. `toThesisTree` turns a valid draft into a tree.
+- **`server/predictionMarkets.ts`** fetches quotes from Polymarket's Gamma
+  API (`/markets?slug=`) and Kalshi's trade API v2 (`/markets/{ticker}`),
+  caches them briefly, drops a venue that fails, and serves
+  `GET /odds/{questionId}` for the markets listed on a question, plus
+  `GET /odds/search?q=` to help editors find Polymarket slugs. Written
+  against the venues' documented responses and tested with fixtures.
 - **`server/profile.ts`** drafts the framework for a symbol with the same
   SDK: one structured-output call, `validateProfileDraft` (no numbers, no
   advice, both directions, real questions), one retry. `npm run

@@ -37,8 +37,17 @@ export interface StrategyTemplate {
   minDays: number;
 }
 
+/**
+ * The shapes one idea can take. A base template is written in one of them;
+ * the others are derived (domain/structures.ts) so every idea offers a
+ * capped spread, a further-out aggressive spread and an uncapped long option.
+ */
+export type ShapeId = 'capped' | 'aggressive' | 'uncapped';
+
 export interface Bet {
   id: string;
+  /** Set on derived shapes: which shape this is and the base template it came from. */
+  shape?: { id: ShapeId; baseId: string };
   title: string;
   /** One-line, consumer-friendly pitch. */
   pitch: string;
@@ -102,6 +111,26 @@ export interface Resolution {
   resolvesOn: string;
 }
 
+export type PredictionVenue = 'kalshi' | 'polymarket';
+
+/** A prediction-market contract that asks (close to) the same question. */
+export interface PredictionMarketRef {
+  venue: PredictionVenue;
+  /** Kalshi ticker, or Polymarket market slug. */
+  id: string;
+  /** The venue's exact title, so a reader can see how closely it matches. */
+  title: string;
+  url: string;
+}
+
+/** The price of YES at a venue: the crowd's probability, as a fraction. */
+export interface PredictionQuote extends PredictionMarketRef {
+  yes: number;
+  asOf: string;
+  /** "live" from the venue, or a "sample" number for demos. */
+  basis: 'live' | 'sample';
+}
+
 /** A yes/no question about the world tied to current events. */
 export interface EventQuestion {
   id: string;
@@ -111,6 +140,8 @@ export interface EventQuestion {
   category: Category;
   resolution: Resolution;
   outcomes: [EventOutcome, EventOutcome];
+  /** Prediction markets on the same question, for comparing odds. */
+  markets?: PredictionMarketRef[];
 }
 
 /**

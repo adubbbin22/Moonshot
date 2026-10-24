@@ -86,7 +86,9 @@ record are next.
 | Feed | 5 sample event questions; each linked bet shows live cost, max payout and market odds |
 | Thesis | 5 curated trees, plus trees drafted by Claude from the user's own belief (server-side, inside the firewall): gut check and outside view → parts → pre-mortem → "which means…" steps with "then what?" → bets via the mechanism library. Code multiplies the ratings |
 | Stocks | 17 underlying profiles: what it is, catalyst map (up and down, kind, timing, what to watch, the questions that test it), ways to lose anyway. Stock screen; every bet shows what it rides |
-| Bet ideas | 17 strategy templates (strikes relative to spot, minimum days to expiry) priced against the chain |
+| Bet ideas | 17 ideas × 3 shapes (capped, aggressive, uncapped), strikes relative to spot, priced against the chain |
+| Simulation | Monte Carlo of open bets at market or your odds; "10 of these" on every bet |
+| Prediction markets | Kalshi and Polymarket odds per question (sample by default, live via the server), venue arbitrage, event-vs-options comparison |
 | Bet screen | Exact legs, payoff diagram, market-odds ladder, contract picker within budget, kill criteria, "your why" |
 | Portfolio | Total at risk, "if your best one hits", positions with legs, breakeven, thesis |
 | Market data | Synthetic chains (default), Alpaca adapter (dev), backend proxy client. See [DATA.md](DATA.md) |

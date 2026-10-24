@@ -122,6 +122,25 @@ describe('thesis drafting route', () => {
     server.close();
   });
 
+  it('serves prediction-market odds and market search', async () => {
+    const quotes = [{ venue: 'kalshi', id: 'X', title: 'X', url: '', yes: 0.6, asOf: 't', basis: 'live' }];
+    const server = createMarketDataServer(async () => chain, {
+      oddsFor: async (id) => (id === 'known' ? (quotes as never) : undefined),
+      searchMarkets: async (q) => [{ venue: 'polymarket', id: q, title: q, url: '' }],
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as AddressInfo).port;
+    expect(await get(port, '/odds/known')).toMatchObject({ status: 200, body: { quotes } });
+    expect((await get(port, '/odds/unknown')).status).toBe(404);
+    expect(await get(port, '/odds/search?q=hormuz')).toMatchObject({ status: 200, body: { markets: [{ id: 'hormuz' }] } });
+    expect((await get(port, '/odds/search')).status).toBe(400);
+    server.close();
+
+    const bare = await start(async () => chain);
+    expect((await get(bare.port, '/odds/known')).status).toBe(503);
+    bare.server.close();
+  });
+
   it('drafts a profile for editors on its own route', async () => {
     const profile = { symbol: 'AMD', name: 'AMD' };
     const draftProfile = jest.fn(async () => profile as never);

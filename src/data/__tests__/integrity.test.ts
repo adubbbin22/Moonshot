@@ -4,6 +4,7 @@ import { MECHANISMS } from '../mechanisms';
 import { THESES } from '../theses';
 import { UNDERLYINGS } from '../underlyings';
 import { betsExpressing, createLinkResolver } from '@/domain/catalysts';
+import { ladder } from '@/domain/structures';
 import { earliestExpiration, outlivesQuestion } from '@/domain/horizon';
 import { isSpread } from '@/domain/options';
 import { CATEGORY_ORDER } from '@/domain/questionSelector';
@@ -176,6 +177,19 @@ describe('thesis trees', () => {
   it('use every mechanism in the library', () => {
     const used = new Set(THESES.flatMap((t) => allSteps(t).flatMap((s) => s.mechanisms ?? [])));
     expect(MECHANISMS.map((m) => m.id).filter((id) => !used.has(id))).toEqual([]);
+  });
+});
+
+describe('shapes', () => {
+  it.each(BETS.map((b) => [b.id, b] as const))('%s prices in every shape, and its own shape stays asymmetric', (_id, bet) => {
+    for (const shaped of ladder(bet)) {
+      const { strategy } = shaped;
+      const min = minExpirationDate(strategy.minDays, now);
+      const expiration = listedExpirations(now).find((d) => d >= min)!;
+      const priced = priceStrategy(strategy, syntheticChain(strategy.underlying, expiration, now), now);
+      expect(priced.costPerContract).toBeGreaterThan(0);
+      if (shaped.id === bet.id) expect(isAsymmetric(priced)).toBe(true);
+    }
   });
 });
 

@@ -3,11 +3,14 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { BetCard } from '@/components/BetCard';
+import { PredictionOdds } from '@/components/PredictionOdds';
 import { ResolutionNote } from '@/components/ResolutionNote';
 import { MovesStocks } from '@/components/stock/MovesStocks';
 import { ReasonItThrough } from '@/components/thesis/ReasonItThrough';
 import { Button, Card, Chip, Screen, Text } from '@/components/ui';
+import { impliedOdds } from '@/domain/strategy';
 import type { Side } from '@/domain/types';
+import { usePricedBet } from '@/hooks/usePricedBet';
 import { formatDate, formatPercent } from '@/lib/format';
 import { catalog } from '@/services/catalog';
 import { useAppState } from '@/state/store';
@@ -20,6 +23,11 @@ export default function EventScreen() {
   const event = catalog.getEvent(params.id);
   const call = useAppState().calls.find((c) => c.questionId === params.id);
   const [side, setSide] = useState<Side>(params.side ?? call?.side ?? 'yes');
+  // What the options market charges for this side's lead bet, for the prediction-market comparison.
+  const sideOutcome = event?.outcomes.find((o) => o.side === side) ?? event?.outcomes[0];
+  const leadBet = sideOutcome?.betIds[0] ? catalog.getBet(sideOutcome.betIds[0]) : undefined;
+  const lead = usePricedBet(leadBet, event);
+  const optionsOdds = lead.status === 'ready' ? impliedOdds(lead.priced).value : undefined;
 
   if (!event) {
     return (
@@ -91,6 +99,7 @@ export default function EventScreen() {
         />
       ))}
 
+      <PredictionOdds question={event} side={side} call={call} optionsOdds={optionsOdds} />
       <MovesStocks questionId={event.id} />
       <ReasonItThrough questionId={event.id} />
     </Screen>

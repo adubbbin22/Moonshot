@@ -27,6 +27,9 @@ export default function PortfolioScreen() {
           />
           <Stat label="Open bets" value={String(summary.openCount)} />
         </StatRow>
+        {positions.length > 0 ? (
+          <Button label="Simulate returns" variant="secondary" onPress={() => router.push('/simulate')} />
+        ) : null}
       </Card>
 
       {positions.length === 0 ? (

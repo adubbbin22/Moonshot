@@ -12,6 +12,7 @@ import {
 import type { ThesisTree } from '@/domain/types';
 import { formatPercent } from '@/lib/format';
 import { useThesis } from '@/hooks/useThesis';
+import { catalog } from '@/services/catalog';
 import { useAppState } from '@/state/store';
 
 export interface Reasoning {
@@ -58,7 +59,8 @@ export function useReasoning(betId: string, thesisId?: string, stepId?: string):
     path,
     lines,
     chain,
-    why: path.steps.at(-1)?.bets?.find((b) => b.betId === betId)?.why,
+    // Steps link base ideas; a shape of one shares its why.
+    why: path.steps.at(-1)?.bets?.find((b) => b.betId === (catalog.getBet(betId)?.shape?.baseId ?? betId))?.why,
     killCriteria: killCriteria(tree, work.marked),
     text: reasoningText(lines, chain),
   };

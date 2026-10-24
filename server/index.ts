@@ -7,6 +7,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import YahooFinance from 'yahoo-finance2';
 
 import { createMarketDataServer } from './app';
+import { createOddsSource, searchPolymarket } from './predictionMarkets';
 import { draftProfile } from './profile';
 import { draftThesis } from './thesis';
 import { createYahooChainSource, type YahooOptionsResult } from './yahoo';
@@ -55,6 +56,8 @@ const draftCatalog = {
   linksFor: createLinkResolver(MECHANISMS, UNDERLYINGS, BETS),
 };
 let anthropic: Anthropic | undefined;
+const eventsById = new Map(EVENTS.map((e) => [e.id, e]));
+const oddsSource = createOddsSource((url, init) => fetch(url, init), { log });
 
 const audit = (file: string) => (record: object) => {
   mkdirSync(auditDir, { recursive: true });
@@ -75,6 +78,11 @@ const server = createMarketDataServer(loadChain, {
         return draftProfile(anthropic, symbol, { questions: EVENTS }, { audit: audit('profile-drafts.jsonl') });
       }
     : undefined,
+  oddsFor: async (questionId) => {
+    const question = eventsById.get(questionId);
+    return question ? oddsSource(question) : undefined;
+  },
+  searchMarkets: (q) => searchPolymarket(q, (url, init) => fetch(url, init)),
 });
 
 server.listen(port, '0.0.0.0', () => {
@@ -85,6 +93,7 @@ server.listen(port, '0.0.0.0', () => {
   console.log(`Moonshot demo market data (Yahoo Finance) on http://localhost:${port}`);
   if (lanAddresses.length > 0) console.log(`On your network: ${lanAddresses.join(', ')}`);
   console.log(`Try: http://localhost:${port}/chains/NVDA?minExpiration=2027-12-01`);
+  console.log('Prediction-market odds: GET /odds/{questionId} for questions with `markets` in src/data/events.ts; find Polymarket slugs with /odds/search?q=…');
   console.log(
     hasModelCredentials
       ? 'Drafting: on (POST /thesis/draft, POST /underlyings/draft). Start the app with EXPO_PUBLIC_INTELLIGENCE=proxy.'

@@ -1,13 +1,15 @@
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
-import { Text } from '@/components/ui';
+import { Chip, Text } from '@/components/ui';
 import { byExpiration, classifyExpression, type ExpressionStatus } from '@/domain/expression';
 import { maxStakePerBet, stakeCeiling } from '@/domain/sizing';
 import { impliedOdds, type PricedStrategy } from '@/domain/strategy';
+import { SHAPE_LABELS, shapeOf } from '@/domain/structures';
 import type { Bet, EventQuestion } from '@/domain/types';
 import { usePricedBets } from '@/hooks/usePricedBet';
-import { formatDate, formatMoney, formatPercent } from '@/lib/format';
+import { formatDate, formatMoney, formatMultiple, formatPercent } from '@/lib/format';
 import { strikesLabel } from '@/lib/strategyText';
+import { catalog } from '@/services/catalog';
 import { useAppState } from '@/state/store';
 import { colors, radius, spacing } from '@/theme/tokens';
 
@@ -25,6 +27,8 @@ export interface BetExpressionsProps {
   chain?: number;
   /** Shown when there are bets but none fits right now. */
   noFitText: string;
+  /** Show every shape of each idea (default), or only the ideas as written. */
+  shapes?: boolean;
   onOpen: (bet: Bet) => void;
 }
 
@@ -35,15 +39,22 @@ const HIDDEN_REASONS: Record<Exclude<ExpressionStatus, 'ok'>, (n: number, cap: n
 };
 
 /**
- * The bets that express a view, priced live. Same bets in the same order for
- * everyone with that view (soonest expiry first); budget, asymmetry and the
- * horizon guard filter but never rank, and what's filtered out is counted.
+ * The bets that express a view, priced live, each idea in every shape it
+ * comes in (capped, aggressive, uncapped). Same bets in the same order for
+ * everyone with that view: soonest expiry first, then the idea, then its
+ * shapes. Budget, asymmetry and the horizon guard filter but never rank,
+ * and what's filtered out is counted.
  */
-export function BetExpressions({ items, question, chain, noFitText, onOpen }: BetExpressionsProps) {
+export function BetExpressions({ items, question, chain, noFitText, shapes = true, onOpen }: BetExpressionsProps) {
   const { profile, positions } = useAppState();
   const ceiling = stakeCeiling(profile, positions, new Date());
+
+  const seen = new Set<string>();
+  const expanded = items
+    .flatMap((item) => (shapes ? catalog.ladderFor(item.bet) : [item.bet]).map((bet) => ({ bet, why: item.why })))
+    .filter(({ bet }) => !seen.has(bet.id) && seen.add(bet.id));
   const states = usePricedBets(
-    items.map((i) => i.bet.id),
+    expanded.map((i) => i.bet.id),
     question?.id,
   );
 
@@ -52,7 +63,7 @@ export function BetExpressions({ items, question, chain, noFitText, onOpen }: Be
     state.status === 'ready'
       ? [
           {
-            ...items[i],
+            ...expanded[i],
             priced: state.priced,
             status: classifyExpression(state.priced, { resolvesOn: question?.resolution.resolvesOn, ceiling }),
           },
@@ -88,6 +99,12 @@ export function BetExpressions({ items, question, chain, noFitText, onOpen }: Be
   );
 }
 
+/** "Capped · 3.6x", "Aggressive · 8x", "No cap". */
+export function shapeTag(bet: Bet, priced: Pick<PricedStrategy, 'payoffMultiple'>): string {
+  const label = SHAPE_LABELS[bet.shape?.id ?? shapeOf(bet.strategy)];
+  return priced.payoffMultiple === null ? label : `${label} · ${formatMultiple(priced.payoffMultiple)}`;
+}
+
 function ExpressionRow({
   bet,
   why,
@@ -96,6 +113,7 @@ function ExpressionRow({
   onPress,
 }: BetExpressionItem & { priced: PricedStrategy; chain?: number; onPress: () => void }) {
   const odds = impliedOdds(priced);
+  const showWhy = why && !bet.shape; // the idea's why once, on its base shape
   return (
     <Pressable
       accessibilityRole="button"
@@ -105,14 +123,12 @@ function ExpressionRow({
         <Text variant="label" style={styles.rowTitle}>
           {bet.title}
         </Text>
-        <Text variant="caption" tone="faint">
-          ›
-        </Text>
+        <Chip label={shapeTag(bet, priced)} color={bet.shape ? colors.textMuted : colors.accent} />
       </View>
       <Text variant="caption" tone="faint">
         {priced.underlying} {strikesLabel(priced.kind, priced.legs)} · {formatDate(priced.expiration)}
       </Text>
-      {why ? <Text tone="muted">{why}</Text> : null}
+      {showWhy ? <Text tone="muted">{why}</Text> : null}
       <View style={styles.stats}>
         <Text variant="caption" tone="downside">
           Costs {formatMoney(priced.costPerContract)}
@@ -150,7 +166,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   rowPressed: { backgroundColor: colors.surfaceRaised },
-  rowHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
+  rowHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   rowTitle: { flex: 1 },
   stats: { flexDirection: 'row', gap: spacing.md, flexWrap: 'wrap' },
   chain: { color: colors.violet },

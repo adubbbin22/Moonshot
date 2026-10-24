@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
-import type { ChainSnapshot, ThesisTree, UnderlyingProfile } from '../src/domain/types';
+import type { ChainSnapshot, PredictionMarketRef, PredictionQuote, ThesisTree, UnderlyingProfile } from '../src/domain/types';
 
 /**
  * Minimal demo server speaking the protocols the app's proxy providers
@@ -10,6 +10,8 @@ import type { ChainSnapshot, ThesisTree, UnderlyingProfile } from '../src/domain
  *   GET  /chains/{underlying}?minExpiration=YYYY-MM-DD  ->  ChainSnapshot JSON
  *   POST /thesis/draft  { belief }                       ->  { tree: ThesisTree }        (when a drafter is configured)
  *   POST /underlyings/draft  { symbol }                  ->  { profile: UnderlyingProfile }  (same; for editors, see draft-profile.ts)
+ *   GET  /odds/{questionId}                              ->  { quotes: PredictionQuote[] }   (when an odds source is configured)
+ *   GET  /odds/search?q=…                                ->  { markets: PredictionMarketRef[] }  (editors: find Polymarket slugs)
  *   GET  /health                                         ->  { ok: true, thesisDrafter: boolean }
  *
  * Chains are cached so a screen full of bets doesn't hammer the upstream.
@@ -18,6 +20,8 @@ import type { ChainSnapshot, ThesisTree, UnderlyingProfile } from '../src/domain
 export type ChainLoader = (underlying: string, minExpiration: string) => Promise<ChainSnapshot>;
 export type ThesisDrafter = (belief: string) => Promise<ThesisTree>;
 export type ProfileDrafter = (symbol: string) => Promise<UnderlyingProfile>;
+export type OddsSource = (questionId: string) => Promise<PredictionQuote[] | undefined>;
+export type MarketSearch = (query: string) => Promise<PredictionMarketRef[]>;
 
 export interface ServerOptions {
   cacheTtlMs?: number;
@@ -26,6 +30,10 @@ export interface ServerOptions {
   draftThesis?: ThesisDrafter;
   /** Drafts the catalyst map for a symbol, for editors to review. Absent when no model credentials are configured. */
   draftProfile?: ProfileDrafter;
+  /** Prediction-market quotes for a question id; undefined for an unknown question. */
+  oddsFor?: OddsSource;
+  /** Finds prediction markets by text, for editors mapping questions. */
+  searchMarkets?: MarketSearch;
 }
 
 const MAX_BODY_BYTES = 4096;
@@ -66,7 +74,7 @@ function send(res: ServerResponse, status: number, body: unknown) {
 }
 
 export function createMarketDataServer(loadChain: ChainLoader, options: ServerOptions = {}) {
-  const { cacheTtlMs = 5 * 60 * 1000, log = () => {}, draftThesis, draftProfile } = options;
+  const { cacheTtlMs = 5 * 60 * 1000, log = () => {}, draftThesis, draftProfile, oddsFor, searchMarkets } = options;
   const cache = new Map<string, { at: number; promise: Promise<ChainSnapshot> }>();
 
   function cachedChain(underlying: string, minExpiration: string): Promise<ChainSnapshot> {
@@ -120,6 +128,24 @@ export function createMarketDataServer(loadChain: ChainLoader, options: ServerOp
     if (req.method !== 'GET') return send(res, 405, { error: 'Method not allowed' });
 
     if (url.pathname === '/health') return send(res, 200, { ok: true, thesisDrafter: Boolean(draftThesis) });
+
+    if (url.pathname === '/odds/search') {
+      if (!searchMarkets) return send(res, 503, { error: 'Market search is not configured on this server.' });
+      const q = url.searchParams.get('q')?.trim() ?? '';
+      if (!q) return send(res, 400, { error: 'Expected /odds/search?q=…' });
+      try {
+        return send(res, 200, { markets: await searchMarkets(q) });
+      } catch (error) {
+        return send(res, 502, { error: error instanceof Error ? error.message : String(error) });
+      }
+    }
+    const odds = /^\/odds\/([^/]+)$/.exec(url.pathname);
+    if (odds) {
+      if (!oddsFor) return send(res, 503, { error: 'Prediction-market odds are not configured on this server.' });
+      const quotes = await oddsFor(decodeURIComponent(odds[1]));
+      if (!quotes) return send(res, 404, { error: 'Unknown question' });
+      return send(res, 200, { quotes });
+    }
 
     const match = /^\/chains\/([^/]+)$/.exec(url.pathname);
     if (!match) return send(res, 404, { error: 'Not found' });
