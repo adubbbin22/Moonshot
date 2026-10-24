@@ -9,6 +9,7 @@ with each vendor before signing anything._
 | Stage | Prices from | Execution | What it costs |
 | --- | --- | --- | --- |
 | **Now: prototype** | Built-in synthetic chains (default), or your own free Alpaca account in dev builds | Paper broker | $0 |
+| **Demo** | Yahoo Finance through the local demo server (`npm run market-data`, `EXPO_PUBLIC_MARKET_DATA=yahoo`) | Paper broker | $0, demo only (see below) |
 | **Private beta: paper trading with real users** | Our backend proxy + a vendor plan licensed for in-app display. Delayed data is fine | Paper broker | Vendor business plan (quote needed) plus a possible OPRA vendor fee |
 | **Live trading** | Delayed data for browsing; a real-time quote only on the order ticket | Alpaca Broker API (supports spreads for end users) | Above, plus real-time OPRA fees (about $1.25 per user per month) unless the broker's partner terms cover it |
 
@@ -128,9 +129,28 @@ power an app that other people use.
 
 Where they do help: connect the Robinhood MCP to Claude to research ideas
 and sanity-check prices for your own decisions, or use yfinance in a local
-notebook to explore chains. For the app, a free Alpaca key gives the same
-"free for development" benefit through a sanctioned API, and Alpaca is also
-the likely execution partner.
+notebook to explore chains.
+
+### The Yahoo demo setup
+
+For demos we accept Yahoo's limits, and the app still never talks to Yahoo
+directly:
+
+```
+app (EXPO_PUBLIC_MARKET_DATA=yahoo) ──GET /chains/NVDA?minExpiration=…──► server/ (your laptop)
+                                                                            └─► yahoo-finance2 ─► Yahoo
+```
+
+- `server/` speaks the same `/chains` protocol as the production backend, so
+  the market version swaps the data source behind the server, not the app.
+- [`yahoo-finance2`](https://www.npmjs.com/package/yahoo-finance2) handles
+  Yahoo's cookie and crumb session. `server/yahoo.ts` maps its output to a
+  `ChainSnapshot`. Zero bids and asks become "no quote", and implausible
+  implied volatilities are dropped so the app infers one from the price.
+- If no expiration is listed as far out as a bet wants, the server uses the
+  furthest one, and the bet screen shows the real expiry.
+- Chains are cached for 5 minutes to stay under Yahoo's rate limits.
+- Run it on your own machine during US market hours, and keep it to demos.
 
 ## Questions to ask every vendor
 

@@ -36,7 +36,7 @@ Docs:
 
 ## Run it
 
-Requires Node 20+.
+Requires Node 22+.
 
 ```bash
 npm install
@@ -46,15 +46,37 @@ npx expo start        # then press i (iOS simulator), a (Android) or w (web)
 On a phone, install **Expo Go** and scan the QR code. Every native module
 used here ships in Expo Go, so you don't need a custom build yet.
 
-Prices are synthetic by default. To use real (delayed/indicative) chains from
-your own free Alpaca account in a dev build, copy `.env.example` to
-`.env.local` and set `EXPO_PUBLIC_MARKET_DATA=alpaca` with your keys. Read
-[docs/DATA.md](docs/DATA.md) first: that path is for local development only.
+Prices are synthetic by default.
+
+### Demo with real prices (Yahoo Finance)
+
+Run a small local server that fetches option chains from Yahoo Finance, and
+point the app at it:
+
+```bash
+npm run market-data                                # terminal 1: server on :8787
+EXPO_PUBLIC_MARKET_DATA=yahoo npx expo start -c    # terminal 2: the app
+```
+
+- The app finds the server through Metro's address, so a phone running Expo
+  Go on the same Wi-Fi works with no extra setup. To point elsewhere, set
+  `EXPO_PUBLIC_MARKET_DATA_URL`.
+- Run the server on your own machine. Yahoo blocks most cloud servers.
+- Demo during US market hours (9:30am–4pm ET). Outside them, Yahoo often
+  reports zero bids and asks, so prices fall back to the last trade, and
+  some bets may not price.
+- This is for demos only. Yahoo has no official API and its terms don't cover
+  showing its data in an app. The market version uses licensed OPRA data
+  (see [docs/DATA.md](docs/DATA.md)).
+
+Other sources (Alpaca keys for development, or our own backend) are
+configured in `.env.example`.
 
 | Script              | What it does                         |
 | ------------------- | ------------------------------------ |
 | `npm start`         | Expo dev server                      |
 | `npm run web`       | Run in the browser                   |
+| `npm run market-data` | Demo market data server (Yahoo Finance) on :8787 |
 | `npm test`          | Jest unit tests (domain, data, state) |
 | `npm run typecheck` | `tsc --noEmit`                       |
 | `npm run lint`      | ESLint via `expo lint`               |
@@ -86,5 +108,6 @@ src/
   components/          UI kit and Moonshot-specific components
   theme/               Design tokens and labels
   test/                Shared test fixtures
-docs/                  Product and architecture notes
+server/                Demo market data server (Yahoo Finance via yahoo-finance2)
+docs/                  Product, data and architecture notes
 ```

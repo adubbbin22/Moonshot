@@ -75,6 +75,8 @@ export interface ChainSnapshot {
   asOf: string;
   expiration: string;
   contracts: OptionContract[];
+  /** Where the prices came from, shown to users (e.g. "Yahoo Finance (delayed)"). */
+  source?: string;
 }
 
 export type Side = 'yes' | 'no';

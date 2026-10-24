@@ -1,3 +1,5 @@
+import Constants from 'expo-constants';
+
 import { createAlpacaProvider } from './alpaca';
 import { createProxyProvider } from './proxy';
 import { createSyntheticProvider } from './synthetic';
@@ -5,15 +7,33 @@ import type { MarketDataProvider } from './types';
 
 export type { MarketDataProvider } from './types';
 
+/** Port of the local demo server (`npm run market-data`). */
+const DEMO_SERVER_PORT = 8787;
+
+/**
+ * The demo server runs on the same machine as Metro, so reuse Metro's host:
+ * that's the laptop's LAN IP on a phone and "localhost" in a simulator or browser.
+ */
+function demoServerUrl(): string {
+  const host = Constants.expoConfig?.hostUri?.split(':')[0] || 'localhost';
+  return `http://${host}:${DEMO_SERVER_PORT}`;
+}
+
 /**
  * Picks the market data source from EXPO_PUBLIC_MARKET_DATA (see .env.example):
  * - "synthetic" (default): made-up chains, no keys needed.
+ * - "yahoo": Yahoo Finance through the local demo server. Demo only (see docs/DATA.md).
  * - "proxy": our backend at EXPO_PUBLIC_MARKET_DATA_URL. The production path.
  * - "alpaca": straight to Alpaca with keys from the env. Development only,
  *   because EXPO_PUBLIC_ values are compiled into the app bundle.
  */
 function createProvider(): MarketDataProvider {
   const choice = process.env.EXPO_PUBLIC_MARKET_DATA ?? 'synthetic';
+
+  if (choice === 'yahoo') {
+    const url = process.env.EXPO_PUBLIC_MARKET_DATA_URL || demoServerUrl();
+    return createProxyProvider(url, fetch, { id: 'yahoo', label: 'Yahoo Finance (delayed, demo only)' });
+  }
 
   if (choice === 'proxy') {
     const url = process.env.EXPO_PUBLIC_MARKET_DATA_URL;

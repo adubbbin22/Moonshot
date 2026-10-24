@@ -45,6 +45,8 @@ export interface PricedStrategy {
   daysToExpiry: number;
   spot: number;
   asOf: string;
+  /** Data source reported by the chain, if any. */
+  source?: string;
   legs: PricedLeg[];
   /** Per-share net debit. */
   debit: number;
@@ -200,6 +202,7 @@ export function priceStrategy(template: StrategyTemplate, chain: ChainSnapshot, 
     daysToExpiry: daysToExpiry(chain.expiration, now),
     spot: chain.spot,
     asOf: chain.asOf,
+    source: chain.source,
     legs,
     ...metrics,
     payoffMultiple:

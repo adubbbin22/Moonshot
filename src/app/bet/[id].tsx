@@ -158,7 +158,7 @@ function PricedBet({
           {STRUCTURE_EXPLAINERS[priced.kind]} Expires {formatDate(priced.expiration)} ({priced.daysToExpiry} days).
         </Text>
         <Text variant="caption" tone="faint">
-          Prices: {marketData.label} · mid prices · as of {new Date(priced.asOf).toLocaleString()}
+          Prices: {priced.source ?? marketData.label} · mid prices · as of {new Date(priced.asOf).toLocaleString()}
         </Text>
       </Card>
 

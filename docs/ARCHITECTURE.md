@@ -36,7 +36,9 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
   - `synthetic.ts`: deterministic Black-Scholes chains, no keys. The default.
   - `alpaca.ts`: Alpaca option-chain snapshots. Dev builds only when called
     from the app.
-  - `proxy.ts`: our backend. The production path.
+  - `proxy.ts`: our backend. The production path. The demo server in
+    `server/` (Yahoo Finance) speaks the same protocol, which is what
+    `EXPO_PUBLIC_MARKET_DATA=yahoo` uses.
   - `index.ts` picks one from `EXPO_PUBLIC_MARKET_DATA` (see `.env.example`).
     Sourcing and licensing are covered in [DATA.md](DATA.md).
 - **`services/pricing.ts`** caches priced bets for 5 minutes so lists and
