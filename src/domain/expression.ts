@@ -15,9 +15,9 @@ export type ExpressionStatus = 'ok' | 'too-short' | 'not-asymmetric' | 'over-lim
 
 export function classifyExpression(
   priced: Pick<PricedStrategy, 'expiration' | 'payoffMultiple' | 'costPerContract'>,
-  context: { resolvesOn: string; ceiling: number },
+  context: { resolvesOn?: string; ceiling: number },
 ): ExpressionStatus {
-  if (!outlivesQuestion(priced.expiration, context.resolvesOn)) return 'too-short';
+  if (context.resolvesOn && !outlivesQuestion(priced.expiration, context.resolvesOn)) return 'too-short';
   if (!isAsymmetric(priced)) return 'not-asymmetric';
   if (priced.costPerContract > context.ceiling) return 'over-limit';
   return 'ok';

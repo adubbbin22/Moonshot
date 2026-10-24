@@ -168,6 +168,28 @@ Every specialist ranked this first. It's also a compliance control.
 
 ### 3. The Thesis Tree, an LLM decision tree inside a firewall
 
+_Built in the prototype without the LLM (October 2026), in `src/app/thesis/`:_
+- **Gut check:** one tap on a five-step scale (10% to 90%).
+- **Break it down:** the belief splits into the three parts it depends on.
+  Each part has the case for, the strongest case against, and the feed
+  question that tests it, if there is one. The user rates each part assuming
+  the ones above it hold. Code multiplies them ("90% × 90% × 70% = 57%"),
+  sets the result against the gut number, and names the weakest link.
+- **What follows:** "which means…" steps for both sides, with the side the
+  user leans toward opened first. Rating a step shows the chain ("57% × 75% =
+  43%") and the bets under it, each with why it follows. Beside each bet,
+  "Your chain" sits next to "Market ~X%", with a caption that the bet pays on
+  the stock, not on the chain.
+- **The bet screen** shows the reasoning: each link with its number, why this
+  bet, and where it could break. "Use my reasoning" turns the chain into a
+  first draft of "your why".
+- Calls on feed questions fill in matching claims ("from your call"), and
+  takes and questions link to the tree they belong to.
+- Five curated trees stand in for the mechanism library. Every bet in the
+  catalog is reachable from at least one tree.
+- Not built yet: LLM-proposed steps, the steelman → kill-criteria tap, and
+  checkpoint questions per step.
+
 What it does:
 1. **Restate:** the user's belief ("the Gulf stays a mess") becomes a claim
    that can resolve. The user confirms or edits it.
@@ -487,6 +509,9 @@ likely with NFA registration, and no sports, elections or war.
   say so.
 - The cold start (see above): topics, quick calls, reveal, take profile,
   terms, ways to express.
+- The Thesis Tree without the LLM (see section 3): gut check, parts, chain
+  math, which-means steps, bets with their why, reasoning on the bet
+  screen.
 - Copy fixes: "Wrong: lose what you paid", "Expect most to expire worthless.
   Size them so that's fine."
 
@@ -506,7 +531,8 @@ likely with NFA registration, and no sports, elections or war.
 - Vintages and the night sky.
 
 **Then: the smart layer (needs a backend and an LLM API)**
-- The Thesis Tree with the mechanism library and firewall.
+- LLM-proposed steps for the Thesis Tree, inside the firewall, reviewed into
+  the mechanism library.
 - The question pipeline (LLM draft → rules-lawyer pass → human approval).
 - WORM logging of every LLM output.
 

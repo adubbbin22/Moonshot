@@ -25,7 +25,7 @@ export function makePosition(overrides: Partial<Position> = {}): Position {
   };
 }
 
-export function makeBet(id: string, tags: string[]): Bet {
+export function makeBet(id: string): Bet {
   return {
     id,
     title: id,
@@ -40,7 +40,6 @@ export function makeBet(id: string, tags: string[]): Bet {
     whatHasToBeTrue: [],
     killCriteria: [],
     category: 'tech',
-    tags,
   };
 }
 

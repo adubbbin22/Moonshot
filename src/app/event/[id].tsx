@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { BetCard } from '@/components/BetCard';
 import { ResolutionNote } from '@/components/ResolutionNote';
+import { ReasonItThrough } from '@/components/thesis/ReasonItThrough';
 import { Button, Card, Chip, Screen, Text } from '@/components/ui';
 import type { Side } from '@/domain/types';
 import { formatDate, formatPercent } from '@/lib/format';
@@ -88,6 +89,8 @@ export default function EventScreen() {
           onPress={() => router.push({ pathname: '/bet/[id]', params: { id: bet.id, eventId: event.id, side } })}
         />
       ))}
+
+      <ReasonItThrough questionId={event.id} />
     </Screen>
   );
 }

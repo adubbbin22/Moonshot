@@ -1,10 +1,11 @@
 import { BETS } from '../bets';
 import { EVENTS } from '../events';
-import { THEMES } from '../themes';
+import { THESES } from '../theses';
 import { earliestExpiration, outlivesQuestion } from '@/domain/horizon';
 import { isSpread } from '@/domain/options';
 import { CATEGORY_ORDER } from '@/domain/questionSelector';
 import { isAsymmetric, minExpirationDate, priceStrategy } from '@/domain/strategy';
+import { allClaims, allSteps, treeBetIds } from '@/domain/thesisTree';
 import { listedExpirations, SYNTHETIC_UNDERLYINGS, syntheticChain } from '@/services/marketData/synthetic';
 
 /**
@@ -13,7 +14,7 @@ import { listedExpirations, SYNTHETIC_UNDERLYINGS, syntheticChain } from '@/serv
  */
 
 const betIds = new Set(BETS.map((b) => b.id));
-const betTags = new Set(BETS.flatMap((b) => b.tags));
+const eventIds = new Set(EVENTS.map((e) => e.id));
 const now = new Date('2026-10-24T15:00:00.000Z');
 
 function duplicates(ids: string[]): string[] {
@@ -93,24 +94,49 @@ describe('events', () => {
   });
 });
 
-describe('themes', () => {
+describe('thesis trees', () => {
   it('have unique ids', () => {
-    expect(duplicates(THEMES.map((t) => t.id))).toEqual([]);
+    expect(duplicates(THESES.map((t) => t.id))).toEqual([]);
   });
 
-  it('only use tags that match at least one bet, so every answer leads somewhere', () => {
-    const orphanTags = THEMES.flatMap((t) =>
-      t.steps.flatMap((s) => s.options.flatMap((o) => o.tags)),
-    ).filter((tag) => !betTags.has(tag));
-    expect(orphanTags).toEqual([]);
+  it.each(THESES.map((t) => [t.id, t] as const))('%s has unique claim ids', (_id, tree) => {
+    expect(duplicates(allClaims(tree).map((c) => c.id))).toEqual([]);
   });
 
-  it('have unique step and option ids within each theme', () => {
-    for (const theme of THEMES) {
-      expect(duplicates(theme.steps.map((s) => s.id))).toEqual([]);
-      for (const step of theme.steps) {
-        expect(duplicates(step.options.map((o) => o.id))).toEqual([]);
+  it.each(THESES.map((t) => [t.id, t] as const))('%s breaks the belief down and follows both sides', (_id, tree) => {
+    expect(tree.premises.length).toBeGreaterThanOrEqual(2);
+    expect(tree.ifTrue.length).toBeGreaterThan(0);
+    expect(tree.ifFalse.length).toBeGreaterThan(0);
+    expect(allSteps({ ifTrue: tree.ifTrue, ifFalse: [] }).some((s) => (s.bets ?? []).length > 0)).toBe(true);
+  });
+
+  it.each(THESES.map((t) => [t.id, t] as const))('%s argues both sides of every claim', (_id, tree) => {
+    for (const claim of allClaims(tree)) {
+      const reason = 'why' in claim ? claim.why : claim.because;
+      expect(reason.trim()).not.toBe('');
+      expect(claim.against.trim()).not.toBe('');
+    }
+  });
+
+  it.each(THESES.map((t) => [t.id, t] as const))('%s only links bets that exist, each with a why and no prices', (_id, tree) => {
+    for (const step of allSteps(tree)) {
+      for (const link of step.bets ?? []) {
+        expect(betIds.has(link.betId)).toBe(true);
+        expect(link.why.trim()).not.toBe('');
+        // Prices, strikes, odds and multiples come from code, never from copy.
+        expect(link.why).not.toMatch(/[$%]|\d+(\.\d+)?x\b|\d+(\.\d+)?\s*(times|percent)\b/i);
       }
     }
+  });
+
+  it.each(THESES.map((t) => [t.id, t] as const))('%s only checks claims against questions that exist', (_id, tree) => {
+    for (const claim of allClaims(tree)) {
+      if (claim.check) expect(eventIds.has(claim.check.questionId)).toBe(true);
+    }
+  });
+
+  it('give every bet in the catalog a line of reasoning', () => {
+    const reachable = new Set(THESES.flatMap(treeBetIds));
+    expect(BETS.map((b) => b.id).filter((id) => !reachable.has(id))).toEqual([]);
   });
 });

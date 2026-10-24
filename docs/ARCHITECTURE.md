@@ -28,7 +28,13 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
     option.
   - `sizing.ts` and `portfolio.ts`: budget guardrails in whole contracts, and
     the power-law summary.
-  - `thesisEngine.ts`: answers → thesis → matching bets.
+  - `thesisTree.ts`: first-principles reasoning as arithmetic.
+    - A belief's parts are rated, each assuming the ones above it hold, and
+      multiply into the belief.
+    - Each "which means…" step multiplies into a chain (the belief, or its
+      failure, times every step on the way).
+    - Also: the weakest link, the gut check, and filling ratings from the
+      user's calls on the questions that test a claim.
   - The cold start (see [STRATEGY.md](STRATEGY.md#cold-start-from-a-stranger-to-ways-to-express-built)):
     - `calls.ts`: a call is a side plus a probability (presets 60/75/90%), and
       its conviction.
@@ -44,6 +50,14 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
   to spot (e.g. buy 1.30×, sell 1.33×) and a minimum days-to-expiry. Each time
   a bet is shown, it's priced against today's chain, so the catalog never
   goes stale.
+- **Thesis trees are curated content.** `data/theses.ts` holds each
+  belief's parts, its "which means…" steps and the links to bets, each with
+  a why. It stands in for the mechanism library in
+  [STRATEGY.md](STRATEGY.md): an LLM may later propose steps, but people
+  approve them and the links to bets stay curated. The user's ratings live in
+  the store, never in the content, and `components/BetExpressions.tsx`
+  renders the same filtered, expiry-ordered bet list for thesis steps and
+  for calls.
 - **`services/marketData/`** is the only place prices come from. Every
   provider implements `getChain(underlying, { minExpiration })` →
   `ChainSnapshot`:
@@ -72,7 +86,7 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
 - **`state/store.tsx`** is a React context with a plain reducer. It holds:
   - the profile (budget, per-bet cap, onboarded);
   - positions, with legs, contracts, cost and breakeven;
-  - saved theses;
+  - the user's work on each thesis tree (gut number and ratings);
   - calls, skips and seed topics.
 
   `usePlaceBet` enforces the budget before calling the broker, and
@@ -84,7 +98,10 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
   - a linked bet isn't asymmetric, costs too much per contract, or expires
     less than 30 days after its question resolves;
   - a referenced bet is missing;
-  - a thesis answer maps to nothing.
+  - a thesis tree links a missing bet or question, leaves a claim without
+    its case against, or puts a price in a bet's why;
+  - a bet in the catalog isn't reachable from any thesis tree, so it would
+    have no line of reasoning.
 
 Routing uses Expo Router with typed routes. The onboarding gate is a
 `Stack.Protected` guard on `profile.onboarded`. Before onboarding, only
@@ -102,7 +119,7 @@ Rough order of when each piece becomes necessary:
 2. **Accounts and persistence.** Auth, then server-side storage for profile,
    positions and theses. Postgres is a fine default (Supabase gives you auth,
    Postgres and row-level security in one).
-3. **Content service.** Events, themes and bet templates as data with an
+3. **Content service.** Events, thesis trees and bet templates as data with an
    editorial workflow (draft → review → published). The `domain/types.ts`
    shapes are the starting schema.
 4. **News → question pipeline.** Ingest headlines, have an LLM draft

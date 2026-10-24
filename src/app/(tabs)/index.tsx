@@ -78,7 +78,9 @@ export default function FeedScreen() {
       <Card onPress={() => router.navigate('/theses')} style={styles.promo}>
         <View style={styles.promoText}>
           <Text variant="heading">Want to go deeper?</Text>
-          <Text tone="muted">Answer three questions about a big theme and get bets that match your view.</Text>
+          <Text tone="muted">
+            Break a big belief into its parts, follow what it means, and see the bets that pay if you’re right.
+          </Text>
         </View>
         <Text variant="label" tone="accent">
           Build a thesis →

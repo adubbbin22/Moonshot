@@ -2,54 +2,55 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { Card, Screen, Text } from '@/components/ui';
+import { builtBelief, weakestLink, withCallRatings } from '@/domain/thesisTree';
+import { formatPercent } from '@/lib/format';
 import { catalog } from '@/services/catalog';
 import { useAppState } from '@/state/store';
-import { spacing } from '@/theme/tokens';
+import { colors, spacing } from '@/theme/tokens';
 
-/** Entry point for the guided "reason your way to a thesis" flow. */
+/** Entry point for reasoning from a belief, through its parts and consequences, to bets. */
 export default function ThesesScreen() {
-  const { theses } = useAppState();
-  const themes = catalog.listThemes();
+  const { thesisWork, calls } = useAppState();
 
   return (
-    <Screen title="Build a thesis" subtitle="Start with what you believe. The bets follow.">
-      {themes.map((theme) => (
-        <Card
-          key={theme.id}
-          onPress={() => router.push({ pathname: '/thesis/[themeId]', params: { themeId: theme.id } })}
-          style={styles.theme}>
-          <Text style={styles.emoji}>{theme.emoji}</Text>
-          <View style={styles.themeText}>
-            <Text variant="heading">{theme.hook}</Text>
-            <Text variant="caption" tone="faint">
-              {theme.title} · {theme.steps.length} questions
-            </Text>
-          </View>
-        </Card>
-      ))}
-
-      {theses.length > 0 ? (
-        <View style={styles.saved}>
-          <Text variant="label" tone="muted">
-            Your theses
-          </Text>
-          {theses.map((thesis) => (
-            <Card key={thesis.id}>
-              <Text variant="caption" tone="faint">
-                {catalog.getTheme(thesis.themeId)?.title}
-              </Text>
-              <Text>“{thesis.statement}”</Text>
-            </Card>
-          ))}
-        </View>
-      ) : null}
+    <Screen
+      title="Build a thesis"
+      subtitle="Break a belief into the parts it depends on, follow what it means, and see the bets that pay if you’re right.">
+      {catalog.listTheses().map((tree) => {
+        const { ratings } = withCallRatings(tree, thesisWork[tree.id]?.ratings ?? {}, calls);
+        const belief = builtBelief(tree, ratings);
+        const weakest = weakestLink(tree, ratings);
+        return (
+          <Card
+            key={tree.id}
+            onPress={() => router.push({ pathname: '/thesis/[id]', params: { id: tree.id } })}
+            style={[styles.tree, belief !== undefined && styles.worked]}>
+            <Text style={styles.emoji}>{tree.emoji}</Text>
+            <View style={styles.text}>
+              <Text variant="heading">{tree.hook}</Text>
+              <Text tone="muted">{tree.belief}</Text>
+              {belief === undefined ? (
+                <Text variant="caption" tone="faint">
+                  {tree.title} · {tree.premises.length} parts to weigh
+                </Text>
+              ) : (
+                <Text variant="caption" style={styles.yours}>
+                  Your number: {formatPercent(belief)}
+                  {weakest ? ` · weakest link: ${weakest.claim.toLowerCase()}` : ''}
+                </Text>
+              )}
+            </View>
+          </Card>
+        );
+      })}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  theme: { flexDirection: 'row', alignItems: 'center' },
+  tree: { flexDirection: 'row', alignItems: 'flex-start' },
+  worked: { borderColor: colors.violet },
   emoji: { fontSize: 32, lineHeight: 40 },
-  themeText: { flex: 1, gap: spacing.xs },
-  saved: { gap: spacing.md },
+  text: { flex: 1, gap: spacing.xs },
+  yours: { color: colors.violet },
 });

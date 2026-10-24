@@ -10,11 +10,12 @@ import {
 import { CONTRACT_MULTIPLIER, isBullish } from '@/domain/options';
 import { checkStake } from '@/domain/sizing';
 import type { PricedStrategy } from '@/domain/strategy';
-import type { Call, Category, Position, PositionSource, Profile, SavedThesis } from '@/domain/types';
-import { createId, paperBroker, type Broker } from '@/services/broker';
+import type { ThesisWork } from '@/domain/thesisTree';
+import type { Call, Category, Position, PositionSource, Profile } from '@/domain/types';
+import { paperBroker, type Broker } from '@/services/broker';
 
 /**
- * App state: the user's profile, calls, open bets and saved theses.
+ * App state: the user's profile, calls, open bets and their reasoning on each thesis.
  *
  * Held in memory for now. Persisting it (device storage, then the backend
  * once accounts exist) is a drop-in change inside this module.
@@ -29,7 +30,8 @@ export interface AppState {
   /** Topics picked on the welcome screen, used to seed the first questions. */
   seedTopics: Category[];
   positions: Position[];
-  theses: SavedThesis[];
+  /** Thesis id -> the user's gut number and ratings on that tree. */
+  thesisWork: Record<string, ThesisWork>;
   /** Screen to open once onboarding completes (the navigator lands on the feed first). */
   pendingLanding?: 'takes';
 }
@@ -42,7 +44,9 @@ export type Action =
   | { type: 'clearLanding' }
   | { type: 'setMonthlyBudget'; monthlyBudget: number }
   | { type: 'addPosition'; position: Position }
-  | { type: 'saveThesis'; thesis: SavedThesis }
+  | { type: 'setGut'; thesisId: string; probability: number }
+  | { type: 'rateClaim'; thesisId: string; claimId: string; probability: number }
+  | { type: 'resetThesis'; thesisId: string }
   | { type: 'reset' };
 
 export const initialState: AppState = {
@@ -51,8 +55,14 @@ export const initialState: AppState = {
   skips: [],
   seedTopics: [],
   positions: [],
-  theses: [],
+  thesisWork: {},
 };
+
+const EMPTY_WORK: ThesisWork = { ratings: {} };
+
+function updateWork(state: AppState, thesisId: string, update: (work: ThesisWork) => ThesisWork): AppState {
+  return { ...state, thesisWork: { ...state.thesisWork, [thesisId]: update(state.thesisWork[thesisId] ?? EMPTY_WORK) } };
+}
 
 export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -85,8 +95,18 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, profile: { ...state.profile, monthlyBudget: action.monthlyBudget } };
     case 'addPosition':
       return { ...state, positions: [action.position, ...state.positions] };
-    case 'saveThesis':
-      return { ...state, theses: [action.thesis, ...state.theses] };
+    case 'setGut':
+      return updateWork(state, action.thesisId, (work) => ({ ...work, gut: action.probability }));
+    case 'rateClaim':
+      return updateWork(state, action.thesisId, (work) => ({
+        ...work,
+        ratings: { ...work.ratings, [action.claimId]: action.probability },
+      }));
+    case 'resetThesis': {
+      const thesisWork = { ...state.thesisWork };
+      delete thesisWork[action.thesisId];
+      return { ...state, thesisWork };
+    }
     case 'reset':
       return initialState;
   }
@@ -165,21 +185,5 @@ export function usePlaceBet(broker: Broker = paperBroker) {
       return { ok: true, position };
     },
     [broker, profile, positions, dispatch],
-  );
-}
-
-export function useSaveThesis() {
-  const dispatch = useAppDispatch();
-  return useCallback(
-    (thesis: Omit<SavedThesis, 'id' | 'createdAt'>): SavedThesis => {
-      const saved: SavedThesis = {
-        ...thesis,
-        id: createId('thesis'),
-        createdAt: new Date().toISOString(),
-      };
-      dispatch({ type: 'saveThesis', thesis: saved });
-      return saved;
-    },
-    [dispatch],
   );
 }

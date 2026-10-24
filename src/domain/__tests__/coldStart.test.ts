@@ -135,8 +135,12 @@ describe('ways to express', () => {
     expect(classifyExpression({ ...priced, costPerContract: 200 }, context)).toBe('over-limit');
   });
 
+  it('skips the horizon check for bets not tied to a question', () => {
+    expect(classifyExpression({ ...priced, expiration: '2027-12-17' }, { ceiling: context.ceiling })).toBe('ok');
+  });
+
   it('maps views to the bets on their side, and keeps sides without bets', () => {
-    const bets = new Map([['t1-yes-bet', makeBet('t1-yes-bet', [])]]);
+    const bets = new Map([['t1-yes-bet', makeBet('t1-yes-bet')]]);
     const views = buildTakeProfile([call('t1', 'yes'), call('e1', 'no')], [], [], questions).views;
     const result = viewsWithBets(views, (id) => questions.find((q) => q.id === id), (id) => bets.get(id));
     expect(result.map((r) => [r.question.id, r.bets.map((b) => b.id)])).toEqual([
@@ -147,7 +151,7 @@ describe('ways to express', () => {
   });
 
   it('orders bets within a view by expiration, then id', () => {
-    const item = (id: string, expiration: string) => ({ bet: makeBet(id, []), priced: { expiration } });
+    const item = (id: string, expiration: string) => ({ bet: makeBet(id), priced: { expiration } });
     const sorted = [item('b', '2028-01-21'), item('a', '2028-01-21'), item('c', '2027-12-17')].sort(byExpiration);
     expect(sorted.map((i) => i.bet.id)).toEqual(['c', 'a', 'b']);
   });

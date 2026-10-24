@@ -4,11 +4,13 @@ import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
 
 import { OutcomeLadder } from '@/components/OutcomeLadder';
 import { PayoffDiagram } from '@/components/PayoffDiagram';
+import { ReasoningCard } from '@/components/thesis/ReasoningCard';
 import { Button, Card, Chip, Screen, Stat, StatRow, Text } from '@/components/ui';
 import { contractOptions, maxStakePerBet, stakeCeiling } from '@/domain/sizing';
-import { isAsymmetric, MIN_PAYOFF_MULTIPLE, type PricedStrategy } from '@/domain/strategy';
+import { impliedOdds, isAsymmetric, MIN_PAYOFF_MULTIPLE, type PricedStrategy } from '@/domain/strategy';
 import type { Bet, PositionSource, Side } from '@/domain/types';
 import { usePricedBet } from '@/hooks/usePricedBet';
+import { useReasoning } from '@/hooks/useReasoning';
 import { formatDate, formatMoney, formatPercent, formatPrice } from '@/lib/format';
 import { positionLabel } from '@/lib/strategyText';
 import { catalog } from '@/services/catalog';
@@ -21,24 +23,26 @@ type Params = {
   id: string;
   eventId?: string;
   side?: Side;
-  themeId?: string;
-  thesis?: string;
+  /** Opened from a thesis tree: which tree, and the step the bet hangs off. */
+  thesisId?: string;
+  stepId?: string;
 };
 
 function sourceFrom(params: Params): PositionSource {
   if (params.eventId && params.side) {
     return { type: 'event', eventId: params.eventId, side: params.side };
   }
-  if (params.themeId) return { type: 'thesis', themeId: params.themeId };
+  if (params.thesisId && params.stepId) return { type: 'thesis', thesisId: params.thesisId, stepId: params.stepId };
   return { type: 'direct' };
 }
 
-/** Bet detail: the exact options trade, its payoff, market odds, sizing and "your why". */
+/** Bet detail: why it follows from your reasoning, the exact trade, its payoff, market odds, sizing and "your why". */
 export default function BetScreen() {
   const params = useLocalSearchParams<Params>();
   const bet = catalog.getBet(params.id);
   const question = params.eventId ? catalog.getEvent(params.eventId) : undefined;
   const pricing = usePricedBet(bet, question);
+  const reasoning = useReasoning(params.id, params.thesisId, params.stepId);
   const [result, setResult] = useState<PlaceBetResult | null>(null);
 
   if (!bet) {
@@ -83,6 +87,13 @@ export default function BetScreen() {
         <Text tone="muted">{bet.pitch}</Text>
       </View>
 
+      {reasoning ? (
+        <ReasoningCard
+          reasoning={reasoning}
+          marketOdds={pricing.status === 'ready' ? impliedOdds(pricing.priced).value : undefined}
+        />
+      ) : null}
+
       {pricing.status === 'loading' ? (
         <Card style={styles.center}>
           <ActivityIndicator color={colors.textMuted} />
@@ -103,7 +114,14 @@ export default function BetScreen() {
       ) : null}
 
       {pricing.status === 'ready' ? (
-        <PricedBet bet={bet} priced={pricing.priced} params={params} onPlaced={setResult} lastResult={result} />
+        <PricedBet
+          bet={bet}
+          priced={pricing.priced}
+          params={params}
+          reasoningText={reasoning?.text}
+          onPlaced={setResult}
+          lastResult={result}
+        />
       ) : null}
     </Screen>
   );
@@ -113,12 +131,15 @@ function PricedBet({
   bet,
   priced,
   params,
+  reasoningText,
   onPlaced,
   lastResult,
 }: {
   bet: Bet;
   priced: PricedStrategy;
   params: Params;
+  /** The user's chain as a sentence, offered as a starting point for their why. */
+  reasoningText?: string;
   onPlaced: (result: PlaceBetResult) => void;
   lastResult: PlaceBetResult | null;
 }) {
@@ -127,7 +148,7 @@ function PricedBet({
   const now = new Date();
   const options = contractOptions(priced.costPerContract, profile, positions, now);
   const [contracts, setContracts] = useState(1);
-  const [why, setWhy] = useState(params.thesis ?? '');
+  const [why, setWhy] = useState('');
   const [placing, setPlacing] = useState(false);
   const affordable = options.includes(contracts);
 
@@ -247,6 +268,11 @@ function PricedBet({
           multiline
           style={styles.input}
         />
+        {reasoningText && why !== reasoningText ? (
+          <View style={styles.chips}>
+            <Chip label="Use my reasoning" onPress={() => setWhy(reasoningText)} />
+          </View>
+        ) : null}
       </Card>
 
       <View style={styles.footer}>

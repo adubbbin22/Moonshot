@@ -28,7 +28,6 @@ export const BETS: Bet[] = [
       'Major AI labs publicly cut capex plans',
     ],
     category: 'tech',
-    tags: ['ai-bull', 'ai-compute', 'ai-fast'],
   },
   {
     id: 'semis-basket',
@@ -45,7 +44,6 @@ export const BETS: Bet[] = [
     whatHasToBeTrue: ['Chip demand from AI broadens beyond a handful of buyers'],
     killCriteria: ['Inventory gluts reported across the major chipmakers'],
     category: 'tech',
-    tags: ['ai-bull', 'ai-compute'],
   },
   {
     id: 'ai-power-calls',
@@ -65,7 +63,6 @@ export const BETS: Bet[] = [
     ],
     killCriteria: ['Hyperscalers shift new data centers to on-site gas instead of grid power'],
     category: 'energy',
-    tags: ['ai-bull', 'ai-power', 'nuclear', 'grid'],
   },
   {
     id: 'smr-nuclear',
@@ -85,7 +82,6 @@ export const BETS: Bet[] = [
     ],
     killCriteria: ['License application rejected or delayed past 2028'],
     category: 'energy',
-    tags: ['nuclear', 'ai-power'],
   },
   {
     id: 'uranium-calls',
@@ -102,7 +98,6 @@ export const BETS: Bet[] = [
     whatHasToBeTrue: ['Reactor restarts and new builds outpace new mine supply'],
     killCriteria: ['Large new mines come online ahead of schedule'],
     category: 'energy',
-    tags: ['nuclear', 'uranium'],
   },
   {
     id: 'natgas-calls',
@@ -119,7 +114,6 @@ export const BETS: Bet[] = [
     whatHasToBeTrue: ['New data centers are powered by on-site gas generation'],
     killCriteria: ['Natural gas prices fall for a full year despite rising demand'],
     category: 'energy',
-    tags: ['natgas', 'ai-power', 'grid'],
   },
   {
     id: 'robotics-calls',
@@ -136,7 +130,6 @@ export const BETS: Bet[] = [
     whatHasToBeTrue: ['Humanoid robots reach real commercial deployments'],
     killCriteria: ['Robot production targets slip by a year or more'],
     category: 'tech',
-    tags: ['ai-robotics', 'ai-bull'],
   },
   {
     id: 'ai-bubble-puts',
@@ -156,7 +149,6 @@ export const BETS: Bet[] = [
     ],
     killCriteria: ['AI software revenue starts compounding at the pace of capex'],
     category: 'tech',
-    tags: ['ai-bear', 'ai-slow'],
   },
   {
     id: 'tanker-calls',
@@ -173,7 +165,6 @@ export const BETS: Bet[] = [
     whatHasToBeTrue: ['Tankers keep avoiding the Strait of Hormuz or pay high insurance to use it'],
     killCriteria: ['Insurance premiums for Gulf transits return to pre-conflict levels'],
     category: 'geopolitics',
-    tags: ['hormuz-disruption', 'shipping', 'oil-up'],
   },
   {
     id: 'oil-calls',
@@ -190,7 +181,6 @@ export const BETS: Bet[] = [
     whatHasToBeTrue: ['A supply shock that spare capacity can’t cover'],
     killCriteria: ['OPEC+ adds supply and prices fall back'],
     category: 'geopolitics',
-    tags: ['oil-up', 'hormuz-disruption', 'inflation'],
   },
   {
     id: 'airlines-calls',
@@ -207,7 +197,6 @@ export const BETS: Bet[] = [
     whatHasToBeTrue: ['De-escalation brings oil prices down', 'Travel demand holds up'],
     killCriteria: ['Recession signals hit consumer travel bookings'],
     category: 'geopolitics',
-    tags: ['deescalation', 'oil-down'],
   },
   {
     id: 'defense-calls',
@@ -224,7 +213,6 @@ export const BETS: Bet[] = [
     whatHasToBeTrue: ['NATO members and the US raise defense spending as promised'],
     killCriteria: ['Major peace deals lead to budget cuts'],
     category: 'geopolitics',
-    tags: ['defense', 'hormuz-disruption'],
   },
   {
     id: 'gold-calls',
@@ -241,7 +229,6 @@ export const BETS: Bet[] = [
     whatHasToBeTrue: ['Central banks keep buying gold', 'Real interest rates fall'],
     killCriteria: ['Central bank gold buying stops for two quarters'],
     category: 'macro',
-    tags: ['gold', 'rate-cuts', 'dollar-down', 'inflation'],
   },
   {
     id: 'small-caps-calls',
@@ -258,7 +245,6 @@ export const BETS: Bet[] = [
     whatHasToBeTrue: ['The Fed cuts meaningfully without a deep recession'],
     killCriteria: ['Inflation re-accelerates and cuts are priced out'],
     category: 'macro',
-    tags: ['rate-cuts', 'small-caps'],
   },
   {
     id: 'biotech-calls',
@@ -275,7 +261,6 @@ export const BETS: Bet[] = [
     whatHasToBeTrue: ['Rates fall', 'M&A from big pharma picks up'],
     killCriteria: ['FDA approvals slow sharply'],
     category: 'health',
-    tags: ['biotech', 'rate-cuts'],
   },
   {
     id: 'satellite-phone',
@@ -294,7 +279,6 @@ export const BETS: Bet[] = [
     ],
     killCriteria: ['Repeated launch delays or a carrier partner walks away'],
     category: 'space',
-    tags: ['space', 'satellite'],
   },
   {
     id: 'launch-calls',
@@ -311,6 +295,5 @@ export const BETS: Bet[] = [
     whatHasToBeTrue: ['Its medium-lift rocket flies reliably on schedule'],
     killCriteria: ['First launches of the new rocket fail or slip by a year'],
     category: 'space',
-    tags: ['space', 'satellite'],
   },
 ];

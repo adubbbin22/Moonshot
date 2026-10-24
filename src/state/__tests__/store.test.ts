@@ -75,3 +75,23 @@ describe('calls', () => {
     expect(state.pendingLanding).toBeUndefined();
   });
 });
+
+describe('thesis work', () => {
+  it('records the gut number and ratings per thesis, replacing earlier ratings', () => {
+    let state = reducer(initialState, { type: 'setGut', thesisId: 'ai', probability: 0.7 });
+    state = reducer(state, { type: 'rateClaim', thesisId: 'ai', claimId: 'better', probability: 0.5 });
+    state = reducer(state, { type: 'rateClaim', thesisId: 'ai', claimId: 'better', probability: 0.9 });
+    state = reducer(state, { type: 'rateClaim', thesisId: 'energy', claimId: 'demand', probability: 0.3 });
+    expect(state.thesisWork).toEqual({
+      ai: { gut: 0.7, ratings: { better: 0.9 } },
+      energy: { ratings: { demand: 0.3 } },
+    });
+  });
+
+  it('starts a thesis over without touching the others', () => {
+    let state = reducer(initialState, { type: 'rateClaim', thesisId: 'ai', claimId: 'better', probability: 0.9 });
+    state = reducer(state, { type: 'rateClaim', thesisId: 'energy', claimId: 'demand', probability: 0.3 });
+    state = reducer(state, { type: 'resetThesis', thesisId: 'ai' });
+    expect(state.thesisWork).toEqual({ energy: { ratings: { demand: 0.3 } } });
+  });
+});

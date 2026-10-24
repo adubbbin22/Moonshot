@@ -17,9 +17,16 @@ own it and what would prove you wrong.
   Strait of Hormuz be back to normal by June 2027?"). Each one resolves on a
   named public source. Make the call, see what the market charges, and see
   the bets that pay off if you're right.
-- **Thesis builder:** start from a big question ("Do you believe in AI?"),
-  answer three prompts, and get a plain-English thesis plus the bets that follow
-  from it.
+- **Thesis builder:** start from a big belief ("Do you believe in AI?") and
+  reason it through from first principles:
+  - give your gut number;
+  - break the belief into the parts it depends on, each with the case for and
+    the case against, and rate each one;
+  - follow "which means…" steps down to the bets that pay if your chain holds,
+    each with why it follows and where it could break.
+
+  Code multiplies your ratings, so you see when the whole belief is less
+  likely than it felt.
 
 Both lead to the same **bet screen**. It shows the exact trade (e.g. "Buy the
 NVDA $235 call, sell the $240 call, Jan 2028") priced from the option chain,
@@ -101,18 +108,20 @@ src/
     calls.tsx          More calls (call → reveal deck)
     takes.tsx          Ways to express your takes: the bets that pay if you're right
     event/[id].tsx     A question: how it resolves, your call, bets for each side
-    thesis/[themeId]   Guided thesis builder → thesis → matched bets
+    thesis/[id].tsx    Thesis tree: gut check → break it down → what follows → bets
     bet/[id].tsx       Bet detail: legs, payoff, market odds, contracts, place (paper)
   domain/              Pure TypeScript: Black-Scholes and implied odds,
                        option legs and payoffs, strategy pricing, sizing,
                        thesis engine, calls and take profile, question
-                       selector, horizon guard. No React. Fully unit tested.
+                       selector, horizon guard, thesis-tree chain math.
+                       No React. Fully unit tested.
   data/                Sample questions (with resolution rules), bet
-                       templates, themes (+ integrity tests)
+                       templates, thesis trees (+ integrity tests)
   services/            catalog, marketData (synthetic | alpaca | proxy),
                        pricing cache, broker (paper, multi-leg orders),
                        intelligence/narrator (take profile → plain English)
-  hooks/               usePricedBet(s), useTakeProfile, useNarrative
+  hooks/               usePricedBet(s), useTakeProfile, useNarrative,
+                       useThesisWork, useReasoning
   state/               App state (React context + reducer)
   components/          UI kit and Moonshot-specific components
   theme/               Design tokens and labels

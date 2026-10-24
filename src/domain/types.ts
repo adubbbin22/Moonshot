@@ -48,8 +48,6 @@ export interface Bet {
   /** Signals that would tell you the thesis is wrong. */
   killCriteria: string[];
   category: Category;
-  /** Used by the thesis engine to match bets to a user's answers. */
-  tags: string[];
 }
 
 /** One listed option contract with its latest prices. */
@@ -127,33 +125,74 @@ export interface Call {
   madeAt: string;
 }
 
-export interface ThesisOption {
-  id: string;
-  label: string;
-  tags: string[];
-  /** Sentence this answer adds to the generated thesis. */
-  fragment: string;
+/** A feed question that checks a claim, and which side of it means the claim is true. */
+export interface ClaimCheck {
+  questionId: string;
+  side: Side;
 }
 
+/**
+ * One of the parts a belief comes down to. A belief is only as likely as all
+ * of its parts together, which is the point of breaking it down.
+ */
+export interface ThesisPremise {
+  id: string;
+  /** Short, plain claim: "Models keep getting better at long, real tasks". */
+  claim: string;
+  /** The first-principles case that it holds. */
+  why: string;
+  /** The strongest case against it. */
+  against: string;
+  check?: ClaimCheck;
+}
+
+/** Why a specific bet pays if the step it hangs off comes true. */
+export interface ThesisBetLink {
+  betId: string;
+  /** The last link in the chain, from the world to this bet. No numbers: those come from code. */
+  why: string;
+}
+
+/** A "which means…" step: what follows if the step before it is true. */
 export interface ThesisStep {
   id: string;
-  prompt: string;
-  options: ThesisOption[];
+  claim: string;
+  /** The mechanism: why this follows from the step before. */
+  because: string;
+  /** The strongest case against this step. */
+  against: string;
+  check?: ClaimCheck;
+  /** Bets that pay if the chain up to and including this step holds. */
+  bets?: ThesisBetLink[];
+  next?: ThesisStep[];
 }
 
-/** A guided path from a big question ("Do you believe in AI?") to bets. */
-export interface Theme {
+/**
+ * A thesis tree: a big belief broken into the parts it depends on, then the
+ * chains of consequences that follow if it's true or false, ending in bets.
+ *
+ * Written and reviewed by people (the "mechanism library" in
+ * docs/STRATEGY.md). Every user who reaches a step sees the same bets.
+ */
+export interface ThesisTree {
   id: string;
   title: string;
+  /** The question that opens it: "Do you believe in AI?" */
   hook: string;
   emoji: string;
   category: Category;
-  steps: ThesisStep[];
+  /** The belief, stated as a claim that could turn out true or false. */
+  belief: string;
+  premises: ThesisPremise[];
+  /** What follows if the belief is true. */
+  ifTrue: ThesisStep[];
+  /** What follows if it isn't. */
+  ifFalse: ThesisStep[];
 }
 
 export type PositionSource =
   | { type: 'event'; eventId: string; side: Side }
-  | { type: 'thesis'; themeId: string }
+  | { type: 'thesis'; thesisId: string; stepId: string }
   | { type: 'direct' };
 
 export type LegAction = 'buy' | 'sell';
@@ -183,14 +222,6 @@ export interface Position {
   thesis: string;
   source: PositionSource;
   status: 'open' | 'closed';
-}
-
-export interface SavedThesis {
-  id: string;
-  themeId: string;
-  statement: string;
-  answerIds: string[];
-  createdAt: string;
 }
 
 export interface Profile {
