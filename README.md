@@ -14,7 +14,8 @@ own it and what would prove you wrong.
 ## The two ways in
 
 - **Feed:** yes/no questions tied to current events ("Will shipping through the
-  Strait of Hormuz be back to normal by June 2027?"). Pick a side and you see
+  Strait of Hormuz be back to normal by June 2027?"). Each one resolves on a
+  named public source. Make the call, see what the market charges, and see
   the bets that pay off if you're right.
 - **Thesis builder:** start from a big question ("Do you believe in AI?"),
   answer three prompts, and get a plain-English thesis plus the bets that follow
@@ -95,18 +96,23 @@ TypeScript (strict) · `react-native-svg` · Jest (`jest-expo`).
 src/
   app/                 Routes (Expo Router). Every file here is a screen.
     _layout.tsx        Root stack, providers, onboarding gate
-    onboarding.tsx     Intro, how it works, budget, disclaimer
-    (tabs)/            Feed · Theses · Bets (portfolio) · You (profile)
-    event/[id].tsx     A feed question: pick a side, see bets
+    welcome/           Cold start: intro → topics → 6 calls → take profile → terms
+    (tabs)/            Feed · Theses · Bets (portfolio) · You (take profile, budget)
+    calls.tsx          More calls (call → reveal deck)
+    takes.tsx          Ways to express your takes: the bets that pay if you're right
+    event/[id].tsx     A question: how it resolves, your call, bets for each side
     thesis/[themeId]   Guided thesis builder → thesis → matched bets
     bet/[id].tsx       Bet detail: legs, payoff, market odds, contracts, place (paper)
   domain/              Pure TypeScript: Black-Scholes and implied odds,
                        option legs and payoffs, strategy pricing, sizing,
-                       thesis engine. No React. Fully unit tested.
-  data/                Sample bet templates, events, themes (+ integrity tests)
+                       thesis engine, calls and take profile, question
+                       selector, horizon guard. No React. Fully unit tested.
+  data/                Sample questions (with resolution rules), bet
+                       templates, themes (+ integrity tests)
   services/            catalog, marketData (synthetic | alpaca | proxy),
-                       pricing cache, broker (paper, multi-leg orders)
-  hooks/               usePricedBet
+                       pricing cache, broker (paper, multi-leg orders),
+                       intelligence/narrator (take profile → plain English)
+  hooks/               usePricedBet(s), useTakeProfile, useNarrative
   state/               App state (React context + reducer)
   components/          UI kit and Moonshot-specific components
   theme/               Design tokens and labels

@@ -57,6 +57,75 @@ All four specialists ended round two on this shape.
  free, no account needed               one push a week     score vs. market
 ```
 
+## Cold start: from a stranger to ways to express (built)
+
+_In the prototype as of October 2026. Routes are in `src/app/welcome/`._
+
+A new user arrives with no data. The rule is **personalize the questions,
+never the trades.** What we learn decides which question comes next. The bets
+come only from the user's own calls, and they're the same for anyone who made
+that call.
+
+1. **Intro.** One screen: make the call, see the market's odds, bet small only
+   when you disagree.
+2. **Topics (optional).** Six chips. They're only a seed: they set which topics
+   come first and add a small bonus. Skipping works fine.
+3. **Six quick calls.** Tap Yes or No, then a confidence chip (Lean 60%,
+   Likely 75%, Sure 90%; Likely is preselected), then "Lock it in". "Skip, no
+   take" is a signal too. You can leave after three calls.
+4. **Reveal after each call.**
+   - Your number.
+   - The crowd, shown as "Shows after 50 calls". It is never faked.
+   - "What the market charges ~X%" for the linked bet. A caption says this is
+     the bet's price, not the odds of the question.
+   - Questions where no bet fits say so. The call still counts.
+5. **Your take profile.** What you think, not what you'd buy:
+   - topics weighted by calls and skips;
+   - your strongest views, ordered by conviction;
+   - a call style (measured, confident or bold);
+   - a short narrative that never contains a number.
+6. **Terms.** Budget and disclaimer. These come after the user has seen what
+   the app does, not before.
+7. **Ways to express.**
+   - Your views, ordered by your conviction.
+   - Under each view, the bets that pay if you're right, in expiration order.
+   - A bet is shown only if it passes the horizon guard, still pays 3x at
+     today's prices and fits under your per-bet limit.
+   - Bets that don't fit are counted, with the reason ("2 more are over your
+     $150 per-bet limit").
+   - Nothing is pre-sized.
+
+**Two profiles, kept apart:**
+
+| | Take profile | Money profile |
+| --- | --- | --- |
+| Holds | Views, topics, confidence, call style | Budget, per-bet cap; later KYC and options level |
+| Comes from | Calls and skips | The user, at the terms step |
+| Drives | The next question; the narrative | Which bets fit; sizing on the bet screen |
+| The LLM sees it | Yes, for the narrative | Never |
+
+**Choosing the next question** (`domain/questionSelector.ts`) is
+deterministic:
+- **Coverage first.** Ask one question from each seeded topic, or from every
+  topic if none were picked.
+- **Then follow engagement.** A topic's score is +1 per call, −0.75 per skip,
+  and +0.5 if it was seeded. Topics not yet touched get a 0.25 curiosity
+  bonus.
+- Within a topic, questions come in catalog (editorial) order.
+
+**The LLM seam.** `services/intelligence/narrator.ts` defines `TakeNarrator`.
+Its input is the take profile only, so money and identity data are kept out by
+the types. Today a template writes the paragraph. The production version runs
+an LLM on our backend inside the firewall: no securities, no numbers.
+
+**Market odds on the reveal.**
+- For a spread, the market odds are cost ÷ max payout, a price read straight
+  from the market.
+- For a long option, which has no cap, they're the model's chance the bet
+  profits, and they're labelled as such.
+- Bets are priced against the question: the earliest expiration allowed is
+  the resolution date plus 30 days.
+
 ## The product, piece by piece
 
 ### 1. Resolvable questions and the horizon guard (build first)
@@ -353,8 +422,8 @@ likely with NFA registration, and no sports, elections or war.
 ## Red lines (consolidated)
 
 **Numbers and honesty**
-- No made-up numbers anywhere outsiders can see. Remove the fake crowd split
-  (`crowdYes`) now.
+- No made-up numbers anywhere outsiders can see. (The fake crowd split is
+  gone; the crowd shows only once there are real calls.)
 - Never call risk-neutral odds "the chance". Never present a stock-move
   probability as the probability of the event.
 - Never show mid price as the cost. Never market a multiple without its odds
@@ -411,16 +480,24 @@ likely with NFA registration, and no sports, elections or war.
 
 ## Roadmap
 
+**Done**
+- Removed the fake crowd split. `EventQuestion` has a resolution spec, and
+  all 11 questions resolve on named sources.
+- Horizon guard in the integrity test and at pricing time. Sides with no bet
+  say so.
+- The cold start (see above): topics, quick calls, reveal, take profile,
+  terms, ways to express.
+- Copy fixes: "Wrong: lose what you paid", "Expect most to expire worthless.
+  Size them so that's fine."
+
 **Now: prototype changes (small, no backend)**
-- Remove the fake crowd split. Add a resolution spec to `EventQuestion` and
-  rewrite the five questions to resolve on named sources.
-- Horizon guard in the integrity test. Mark call-only questions.
+- Persist calls and positions on the device. Today they're lost on reload.
+- The confidence slider (the chips stay as the default).
 - Executable pricing: natural vs. mid in the domain, executable 3x filter,
   break-even headline, liquidity gate, paper fills at natural.
 - Bet screen restructured into the Ticket (promise, headline row, bridge,
   longshot warning, exit plan; legs under the hood).
-- "Your why" starts empty. Copy fixes ("Wrong: lose a little" becomes
-  "Wrong: lose it all. That's the plan: it's small."). Drop the $100 budget.
+- "Your why" starts empty. Drop the $100 budget.
 
 **Next: the game loop (needs persistence)**
 - Call → Reveal with local scoring (Brier, calibration chart).

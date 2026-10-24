@@ -1,7 +1,9 @@
 import { BETS } from '../bets';
 import { EVENTS } from '../events';
 import { THEMES } from '../themes';
+import { earliestExpiration, outlivesQuestion } from '@/domain/horizon';
 import { isSpread } from '@/domain/options';
+import { CATEGORY_ORDER } from '@/domain/questionSelector';
 import { isAsymmetric, minExpirationDate, priceStrategy } from '@/domain/strategy';
 import { listedExpirations, SYNTHETIC_UNDERLYINGS, syntheticChain } from '@/services/marketData/synthetic';
 
@@ -66,11 +68,28 @@ describe('events', () => {
     expect(missing).toEqual([]);
   });
 
-  it('have crowd sentiment between 0 and 1', () => {
-    for (const event of EVENTS) {
-      expect(event.crowdYes).toBeGreaterThanOrEqual(0);
-      expect(event.crowdYes).toBeLessThanOrEqual(1);
-    }
+  it.each(EVENTS.map((e) => [e.id, e] as const))('%s says exactly how it resolves', (_id, event) => {
+    const { rule, source, resolvesOn } = event.resolution;
+    expect(rule).toMatch(/^Resolves YES if /);
+    expect(source.length).toBeGreaterThan(2);
+    expect(resolvesOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(resolvesOn > now.toISOString().slice(0, 10)).toBe(true);
+  });
+
+  it('cover every topic, so new users can be asked about each', () => {
+    expect(new Set(EVENTS.map((e) => e.category))).toEqual(new Set(CATEGORY_ORDER));
+  });
+
+  const linked = EVENTS.flatMap((e) =>
+    e.outcomes.flatMap((o) => o.betIds.map((id) => [`${e.id} → ${id}`, e, BETS.find((b) => b.id === id)!] as const)),
+  );
+
+  it.each(linked)('%s outlives its question and stays asymmetric', (_label, event, bet) => {
+    const min = earliestExpiration(bet.strategy.minDays, now, event.resolution.resolvesOn);
+    const expiration = listedExpirations(now).find((d) => d >= min)!;
+    const priced = priceStrategy(bet.strategy, syntheticChain(bet.strategy.underlying, expiration, now), now);
+    expect(outlivesQuestion(priced.expiration, event.resolution.resolvesOn)).toBe(true);
+    expect(isAsymmetric(priced)).toBe(true);
   });
 });
 

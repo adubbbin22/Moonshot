@@ -9,6 +9,15 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   space: 'Space',
 };
 
+export const CATEGORY_EMOJI: Record<Category, string> = {
+  tech: '🤖',
+  energy: '⚡',
+  geopolitics: '🌍',
+  macro: '💵',
+  health: '🧬',
+  space: '🚀',
+};
+
 export const STRUCTURE_LABELS: Record<StructureKind, string> = {
   long_call: 'Call option',
   long_put: 'Put option',

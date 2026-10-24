@@ -36,3 +36,42 @@ describe('reducer', () => {
     expect(reducer(dirty, { type: 'reset' })).toBe(initialState);
   });
 });
+
+describe('calls', () => {
+  const call = (questionId: string, probability = 0.75) => ({
+    questionId,
+    side: 'yes' as const,
+    probability,
+    madeAt: '2026-10-24T10:00:00Z',
+  });
+
+  it('records seed topics, calls and skips', () => {
+    let state = reducer(initialState, { type: 'setSeedTopics', topics: ['tech', 'space'] });
+    state = reducer(state, { type: 'makeCall', call: call('a') });
+    state = reducer(state, { type: 'skipQuestion', questionId: 'b' });
+    state = reducer(state, { type: 'skipQuestion', questionId: 'b' });
+    expect(state.seedTopics).toEqual(['tech', 'space']);
+    expect(state.calls.map((c) => c.questionId)).toEqual(['a']);
+    expect(state.skips).toEqual(['b']);
+  });
+
+  it('keeps one call per question and un-skips a question once it is called', () => {
+    let state = reducer(initialState, { type: 'skipQuestion', questionId: 'a' });
+    state = reducer(state, { type: 'makeCall', call: call('a', 0.6) });
+    state = reducer(state, { type: 'makeCall', call: call('a', 0.9) });
+    expect(state.calls).toEqual([call('a', 0.9)]);
+    expect(state.skips).toEqual([]);
+  });
+
+  it('remembers where to land after onboarding until cleared', () => {
+    let state = reducer(initialState, {
+      type: 'completeOnboarding',
+      monthlyBudget: 500,
+      acceptedAt: '2026-10-24T10:00:00Z',
+      landing: 'takes',
+    });
+    expect(state.pendingLanding).toBe('takes');
+    state = reducer(state, { type: 'clearLanding' });
+    expect(state.pendingLanding).toBeUndefined();
+  });
+});

@@ -3,18 +3,21 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { BetCard } from '@/components/BetCard';
-import { CrowdBar } from '@/components/CrowdBar';
-import { Card, Chip, Screen, Text } from '@/components/ui';
+import { ResolutionNote } from '@/components/ResolutionNote';
+import { Button, Card, Chip, Screen, Text } from '@/components/ui';
 import type { Side } from '@/domain/types';
+import { formatDate, formatPercent } from '@/lib/format';
 import { catalog } from '@/services/catalog';
-import { CATEGORY_LABELS } from '@/theme/categories';
+import { useAppState } from '@/state/store';
+import { CATEGORY_EMOJI, CATEGORY_LABELS } from '@/theme/categories';
 import { colors, radius, spacing } from '@/theme/tokens';
 
-/** A single question: pick a side, see the bets that pay off if you're right. */
+/** A single question: how it resolves, your call, and the bets that pay off if each side is right. */
 export default function EventScreen() {
   const params = useLocalSearchParams<{ id: string; side?: Side }>();
   const event = catalog.getEvent(params.id);
-  const [side, setSide] = useState<Side>(params.side === 'no' ? 'no' : 'yes');
+  const call = useAppState().calls.find((c) => c.questionId === params.id);
+  const [side, setSide] = useState<Side>(params.side ?? call?.side ?? 'yes');
 
   if (!event) {
     return (
@@ -30,14 +33,25 @@ export default function EventScreen() {
   return (
     <Screen edges={[]}>
       <View style={styles.meta}>
-        <Chip label={CATEGORY_LABELS[event.category]} />
+        <Chip label={`${CATEGORY_EMOJI[event.category]} ${CATEGORY_LABELS[event.category]}`} />
         <Text variant="caption" tone="faint">
-          Resolves {event.resolvesBy}
+          Resolves {formatDate(event.resolution.resolvesOn)}
         </Text>
       </View>
       <Text variant="title">{event.question}</Text>
       <Text tone="muted">{event.context}</Text>
-      <CrowdBar yes={event.crowdYes} />
+      <ResolutionNote resolution={event.resolution} />
+
+      {call ? (
+        <Text variant="label" style={{ color: call.side === 'yes' ? colors.yes : colors.no }}>
+          Your call: {formatPercent(call.probability)} {call.side === 'yes' ? 'Yes' : 'No'}
+        </Text>
+      ) : (
+        <Button
+          label="Make the call"
+          onPress={() => router.push({ pathname: '/calls', params: { questionId: event.id } })}
+        />
+      )}
 
       <View style={styles.toggle} accessibilityRole="tablist">
         {event.outcomes.map((o) => {
@@ -60,7 +74,7 @@ export default function EventScreen() {
 
       <Card>
         <Text variant="caption" tone="faint">
-          If you’re right
+          If {side === 'yes' ? 'Yes' : 'No'} is right
         </Text>
         <Text variant="heading">{outcome.label}</Text>
         <Text tone="muted">{outcome.rationale}</Text>
@@ -70,12 +84,8 @@ export default function EventScreen() {
         <BetCard
           key={bet.id}
           bet={bet}
-          onPress={() =>
-            router.push({
-              pathname: '/bet/[id]',
-              params: { id: bet.id, eventId: event.id, side, thesis: outcome.rationale },
-            })
-          }
+          question={event}
+          onPress={() => router.push({ pathname: '/bet/[id]', params: { id: bet.id, eventId: event.id, side } })}
         />
       ))}
     </Screen>

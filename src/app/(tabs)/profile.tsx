@@ -1,9 +1,12 @@
+import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { ConvexityCurve } from '@/components/ConvexityCurve';
 import { Disclaimer } from '@/components/Disclaimer';
+import { TakeProfileView } from '@/components/TakeProfileView';
 import { Button, Card, Chip, Screen, Text } from '@/components/ui';
 import { BUDGET_OPTIONS, maxStakePerBet } from '@/domain/sizing';
+import { useTakeProfile } from '@/hooks/useTakeProfile';
 import { formatMoney } from '@/lib/format';
 import { useAppDispatch, useAppState } from '@/state/store';
 import { spacing } from '@/theme/tokens';
@@ -34,9 +37,16 @@ const PRINCIPLES = [
 export default function ProfileScreen() {
   const { profile } = useAppState();
   const dispatch = useAppDispatch();
+  const takes = useTakeProfile();
 
   return (
-    <Screen title="You" subtitle="Your moonshot budget and how Moonshot works.">
+    <Screen title="You" subtitle="Your take profile, your budget, and how Moonshot works.">
+      <TakeProfileView profile={takes} />
+      <View style={styles.actions}>
+        <Button label="Ways to express" onPress={() => router.push('/takes')} />
+        <Button label="More calls" variant="secondary" onPress={() => router.push('/calls')} />
+      </View>
+
       <Card>
         <Text variant="heading">Monthly moonshot budget</Text>
         <Text tone="muted">
@@ -74,5 +84,6 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  actions: { gap: spacing.sm },
   principle: { gap: spacing.xs },
 });

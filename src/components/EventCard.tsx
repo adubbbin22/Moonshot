@@ -1,71 +1,49 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { CrowdBar } from '@/components/CrowdBar';
-import { Card, Chip, Text } from '@/components/ui';
-import type { EventQuestion, Side } from '@/domain/types';
-import { CATEGORY_LABELS } from '@/theme/categories';
-import { colors, radius, spacing } from '@/theme/tokens';
+import { Button, Card, Chip, Text } from '@/components/ui';
+import type { Call, EventQuestion } from '@/domain/types';
+import { formatDate, formatPercent } from '@/lib/format';
+import { CATEGORY_EMOJI, CATEGORY_LABELS } from '@/theme/categories';
+import { colors, spacing } from '@/theme/tokens';
 
 export interface EventCardProps {
   event: EventQuestion;
-  onAnswer: (side: Side) => void;
+  /** The user's call on this question, if they made one. */
+  call?: Call;
+  onCall: () => void;
+  onOpen: () => void;
 }
 
-/** Feed card: a question about the world. Answering it leads to bets. */
-export function EventCard({ event, onAnswer }: EventCardProps) {
+/** Feed card: a question about the world. Make the call, or browse the bets. */
+export function EventCard({ event, call, onCall, onOpen }: EventCardProps) {
+  const outcome = call ? event.outcomes.find((o) => o.side === call.side) : undefined;
   return (
     <Card>
       <View style={styles.meta}>
-        <Chip label={CATEGORY_LABELS[event.category]} />
+        <Chip label={`${CATEGORY_EMOJI[event.category]} ${CATEGORY_LABELS[event.category]}`} />
         <Text variant="caption" tone="faint">
-          Resolves {event.resolvesBy}
+          Resolves {formatDate(event.resolution.resolvesOn)}
         </Text>
       </View>
       <Text variant="heading">{event.question}</Text>
       <Text tone="muted" numberOfLines={3}>
         {event.context}
       </Text>
-      <CrowdBar yes={event.crowdYes} />
-      <View style={styles.answers}>
-        <AnswerButton label="Yes" color={colors.yes} onPress={() => onAnswer('yes')} />
-        <AnswerButton label="No" color={colors.no} onPress={() => onAnswer('no')} />
+      {call ? (
+        <Text variant="label" style={{ color: call.side === 'yes' ? colors.yes : colors.no }}>
+          Your call: {formatPercent(call.probability)} {call.side === 'yes' ? 'Yes' : 'No'} · {outcome?.label}
+        </Text>
+      ) : null}
+      <View style={styles.actions}>
+        {call ? null : <Button label="Make the call" onPress={onCall} style={styles.action} />}
+        <Button label="See bets" variant="secondary" onPress={onOpen} style={styles.action} />
       </View>
     </Card>
   );
 }
 
-function AnswerButton({
-  label,
-  color,
-  onPress,
-}: {
-  label: string;
-  color: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.answer, { borderColor: color }, pressed && { backgroundColor: color }]}>
-      {({ pressed }) => (
-        <Text variant="label" style={{ color: pressed ? colors.onAccent : color }}>
-          {label}
-        </Text>
-      )}
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   meta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  answers: { flexDirection: 'row', gap: spacing.md },
-  answer: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  actions: { flexDirection: 'row', gap: spacing.md },
+  action: { flex: 1 },
 });

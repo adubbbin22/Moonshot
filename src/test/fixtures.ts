@@ -1,4 +1,4 @@
-import type { Bet, Position } from '@/domain/types';
+import type { Bet, Category, EventQuestion, Position } from '@/domain/types';
 
 /** Test helpers. Not shipped in the app (nothing under src/app imports this). */
 
@@ -41,5 +41,24 @@ export function makeBet(id: string, tags: string[]): Bet {
     killCriteria: [],
     category: 'tech',
     tags,
+  };
+}
+
+export function makeQuestion(
+  id: string,
+  category: Category,
+  overrides: Partial<EventQuestion> = {},
+): EventQuestion {
+  return {
+    id,
+    question: `Question ${id}?`,
+    context: '',
+    category,
+    resolution: { rule: 'Resolves YES if it happens.', source: 'Test source', resolvesOn: '2027-12-15' },
+    outcomes: [
+      { side: 'yes', label: `${id} yes`, rationale: 'Yes rationale', betIds: [`${id}-yes-bet`] },
+      { side: 'no', label: `${id} no`, rationale: 'No rationale', betIds: [] },
+    ],
+    ...overrides,
   };
 }

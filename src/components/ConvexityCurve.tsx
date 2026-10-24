@@ -26,10 +26,10 @@ export function ConvexityCurve() {
       </Svg>
       <View style={styles.legend}>
         <Text variant="caption" tone="downside">
-          Wrong: lose a little
+          Wrong: lose what you paid
         </Text>
         <Text variant="caption" tone="upside">
-          Right: win a lot
+          Right: several times that
         </Text>
       </View>
     </View>

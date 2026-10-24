@@ -1,14 +1,21 @@
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { Card, Text } from '@/components/ui';
-import type { Bet } from '@/domain/types';
+import type { Bet, EventQuestion } from '@/domain/types';
 import { usePricedBet } from '@/hooks/usePricedBet';
 import { formatMoney, formatPercent } from '@/lib/format';
 import { STRUCTURE_LABELS } from '@/theme/categories';
 import { colors, spacing } from '@/theme/tokens';
 
-export function BetCard({ bet, onPress }: { bet: Bet; onPress: () => void }) {
-  const state = usePricedBet(bet);
+export interface BetCardProps {
+  bet: Bet;
+  /** The question this bet is shown for, so it's priced past the question's resolution. */
+  question?: EventQuestion;
+  onPress: () => void;
+}
+
+export function BetCard({ bet, question, onPress }: BetCardProps) {
+  const state = usePricedBet(bet, question);
   const { strategy } = bet;
 
   return (

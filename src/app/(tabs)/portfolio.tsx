@@ -16,7 +16,7 @@ export default function PortfolioScreen() {
   const summary = summarizePortfolio(positions);
 
   return (
-    <Screen title="Your bets" subtitle="Expect most to expire worthless. You only need one to hit.">
+    <Screen title="Your bets" subtitle="Expect most to expire worthless. Size them so that’s fine.">
       <Card>
         <StatRow>
           <Stat label="Max you can lose" value={formatMoney(summary.totalAtRisk)} tone="downside" />

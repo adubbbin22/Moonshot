@@ -10,11 +10,11 @@ import {
 import { CONTRACT_MULTIPLIER, isBullish } from '@/domain/options';
 import { checkStake } from '@/domain/sizing';
 import type { PricedStrategy } from '@/domain/strategy';
-import type { Position, PositionSource, Profile, SavedThesis } from '@/domain/types';
+import type { Call, Category, Position, PositionSource, Profile, SavedThesis } from '@/domain/types';
 import { createId, paperBroker, type Broker } from '@/services/broker';
 
 /**
- * App state: the user's profile, open bets and saved theses.
+ * App state: the user's profile, calls, open bets and saved theses.
  *
  * Held in memory for now. Persisting it (device storage, then the backend
  * once accounts exist) is a drop-in change inside this module.
@@ -22,12 +22,24 @@ import { createId, paperBroker, type Broker } from '@/services/broker';
 
 export interface AppState {
   profile: Profile;
+  /** One call per question; a new call on the same question replaces the old one. */
+  calls: Call[];
+  /** Questions the user skipped ("no take"). */
+  skips: string[];
+  /** Topics picked on the welcome screen, used to seed the first questions. */
+  seedTopics: Category[];
   positions: Position[];
   theses: SavedThesis[];
+  /** Screen to open once onboarding completes (the navigator lands on the feed first). */
+  pendingLanding?: 'takes';
 }
 
 export type Action =
-  | { type: 'completeOnboarding'; monthlyBudget: number; acceptedAt: string }
+  | { type: 'setSeedTopics'; topics: Category[] }
+  | { type: 'makeCall'; call: Call }
+  | { type: 'skipQuestion'; questionId: string }
+  | { type: 'completeOnboarding'; monthlyBudget: number; acceptedAt: string; landing?: 'takes' }
+  | { type: 'clearLanding' }
   | { type: 'setMonthlyBudget'; monthlyBudget: number }
   | { type: 'addPosition'; position: Position }
   | { type: 'saveThesis'; thesis: SavedThesis }
@@ -35,15 +47,31 @@ export type Action =
 
 export const initialState: AppState = {
   profile: { onboarded: false, monthlyBudget: 500, maxPerBetPct: 0.3 },
+  calls: [],
+  skips: [],
+  seedTopics: [],
   positions: [],
   theses: [],
 };
 
 export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
+    case 'setSeedTopics':
+      return { ...state, seedTopics: action.topics };
+    case 'makeCall':
+      return {
+        ...state,
+        calls: [...state.calls.filter((c) => c.questionId !== action.call.questionId), action.call],
+        skips: state.skips.filter((id) => id !== action.call.questionId),
+      };
+    case 'skipQuestion':
+      return state.skips.includes(action.questionId)
+        ? state
+        : { ...state, skips: [...state.skips, action.questionId] };
     case 'completeOnboarding':
       return {
         ...state,
+        pendingLanding: action.landing,
         profile: {
           ...state.profile,
           onboarded: true,
@@ -51,6 +79,8 @@ export function reducer(state: AppState, action: Action): AppState {
           acceptedDisclaimerAt: action.acceptedAt,
         },
       };
+    case 'clearLanding':
+      return { ...state, pendingLanding: undefined };
     case 'setMonthlyBudget':
       return { ...state, profile: { ...state.profile, monthlyBudget: action.monthlyBudget } };
     case 'addPosition':

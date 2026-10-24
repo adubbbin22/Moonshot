@@ -90,6 +90,20 @@ export interface EventOutcome {
   betIds: string[];
 }
 
+/**
+ * How a question settles. Every question needs one: without a named source,
+ * a threshold and a date there is no track record to keep.
+ */
+export interface Resolution {
+  /** Plain-English rule, e.g. "Resolves YES if …". */
+  rule: string;
+  /** Named data source, e.g. "IMF PortWatch". */
+  source: string;
+  sourceUrl?: string;
+  /** Last date the question can resolve (YYYY-MM-DD). */
+  resolvesOn: string;
+}
+
 /** A yes/no question about the world tied to current events. */
 export interface EventQuestion {
   id: string;
@@ -97,10 +111,20 @@ export interface EventQuestion {
   /** Short summary of the news behind the question. */
   context: string;
   category: Category;
-  resolvesBy: string;
-  /** Share of Moonshot users who answered "yes", 0..1. */
-  crowdYes: number;
+  resolution: Resolution;
   outcomes: [EventOutcome, EventOutcome];
+}
+
+/**
+ * A user's forecast on a question: which side, and how likely they think
+ * that side is (0.5–0.99). Calls are free and are the core of the take profile.
+ */
+export interface Call {
+  questionId: string;
+  side: Side;
+  /** Probability the chosen side happens. */
+  probability: number;
+  madeAt: string;
 }
 
 export interface ThesisOption {

@@ -37,7 +37,8 @@ function sourceFrom(params: Params): PositionSource {
 export default function BetScreen() {
   const params = useLocalSearchParams<Params>();
   const bet = catalog.getBet(params.id);
-  const pricing = usePricedBet(bet);
+  const question = params.eventId ? catalog.getEvent(params.eventId) : undefined;
+  const pricing = usePricedBet(bet, question);
   const [result, setResult] = useState<PlaceBetResult | null>(null);
 
   if (!bet) {

@@ -235,3 +235,23 @@ export function minExpirationDate(minDays: number, now: Date): string {
   const d = new Date(now.getTime() + minDays * 24 * 60 * 60 * 1000);
   return d.toISOString().slice(0, 10);
 }
+
+export interface ImpliedOdds {
+  value: number;
+  /**
+   * "price": cost ÷ max payout, read straight off the market (spreads).
+   * "model": options-model chance of profit (long options, which have no fixed max).
+   */
+  basis: 'price' | 'model';
+}
+
+/**
+ * The market's odds for a bet, in one number. For a spread, what it costs per
+ * $1 of max payout is the break-even chance of a full payout: no model needed.
+ */
+export function impliedOdds(priced: Pick<PricedStrategy, 'kind' | 'costPerContract' | 'maxValuePerContract' | 'probProfit'>): ImpliedOdds {
+  if (isSpread(priced.kind) && priced.maxValuePerContract) {
+    return { value: priced.costPerContract / priced.maxValuePerContract, basis: 'price' };
+  }
+  return { value: priced.probProfit, basis: 'model' };
+}
