@@ -109,8 +109,13 @@ configured in `.env.example`.
 ### Host the web build from any path
 
 ```bash
-EXPO_PUBLIC_INTELLIGENCE=fixture node scripts/export-web-hosted.js   # → dist-hosted/
+EXPO_PUBLIC_INTELLIGENCE=fixture EXPO_PUBLIC_TEST_SHORTCUTS=1 node scripts/export-web-hosted.js   # → dist-hosted/
 ```
+
+`EXPO_PUBLIC_TEST_SHORTCUTS=1` keeps the welcome screen's **Skip setup · testing**
+button in the build: it jumps past onboarding with a few sample calls so testers
+land on the takes screen with bets to look at. Dev builds always have it; leave
+it unset for a release.
 
 `expo export` assumes the site root; this script makes the build relative
 and patches the route loader so the folder works from a subpath or a hosted

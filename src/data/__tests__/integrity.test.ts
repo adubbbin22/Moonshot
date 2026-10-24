@@ -1,4 +1,5 @@
 import { BETS } from '../bets';
+import { DEMO_TOPICS, demoCalls } from '../demoCalls';
 import { EVENTS } from '../events';
 import { MECHANISMS } from '../mechanisms';
 import { THESES } from '../theses';
@@ -250,5 +251,28 @@ describe('underlying profiles', () => {
 
   it.each(UNDERLYINGS.map((u) => [u.symbol, u] as const))('%s has at least one bet riding one of its catalysts', (symbol, profile) => {
     expect(profile.catalysts.some((c) => betsExpressing(BETS, symbol, c.direction).length > 0)).toBe(true);
+  });
+});
+
+describe('demo calls', () => {
+  const calls = demoCalls(now);
+  const questions = new Map(EVENTS.map((e) => [e.id, e]));
+
+  it('are one each on real questions, on a side with bets, past a coin flip', () => {
+    expect(duplicates(calls.map((c) => c.questionId))).toEqual([]);
+    for (const call of calls) {
+      const question = questions.get(call.questionId);
+      expect(question).toBeDefined();
+      const outcome = question!.outcomes.find((o) => o.side === call.side);
+      expect(outcome?.betIds.length).toBeGreaterThan(0);
+      expect(call.probability).toBeGreaterThan(0.5);
+      expect(call.probability).toBeLessThanOrEqual(1);
+      expect(Date.parse(call.madeAt)).toBeLessThanOrEqual(now.getTime());
+    }
+  });
+
+  it('cover the topics they claim to', () => {
+    const covered = new Set(calls.map((c) => questions.get(c.questionId)?.category));
+    expect(DEMO_TOPICS.every((t) => covered.has(t))).toBe(true);
   });
 });

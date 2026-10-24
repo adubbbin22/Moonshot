@@ -2,6 +2,9 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { Button, Screen, Text } from '@/components/ui';
+import { DEMO_TOPICS, demoCalls } from '@/data/demoCalls';
+import { testShortcuts } from '@/lib/flags';
+import { useAppDispatch } from '@/state/store';
 import { colors, radius, spacing } from '@/theme/tokens';
 
 const STEPS = [
@@ -15,10 +18,18 @@ const STEPS = [
 ];
 
 export default function WelcomeScreen() {
+  const dispatch = useAppDispatch();
+  const skip = () => dispatch({ type: 'skipOnboarding', calls: demoCalls(new Date()), topics: DEMO_TOPICS });
+
   return (
     <Screen
       edges={['top', 'bottom']}
-      footer={<Button label="Make your first call" onPress={() => router.push('/welcome/topics')} />}>
+      footer={
+        <View style={styles.footer}>
+          <Button label="Make your first call" onPress={() => router.push('/welcome/topics')} />
+          {testShortcuts ? <Button label="Skip setup · testing" variant="ghost" onPress={skip} /> : null}
+        </View>
+      }>
       <View style={styles.hero}>
         <Text variant="display">Moonshot</Text>
         <Text variant="heading">Make the call. See the market’s odds. Bet small only when you disagree.</Text>
@@ -55,4 +66,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   text: { flex: 1, gap: spacing.xs },
+  footer: { gap: spacing.xs },
 });

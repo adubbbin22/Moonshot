@@ -44,6 +44,8 @@ export type Action =
   | { type: 'makeCall'; call: Call }
   | { type: 'skipQuestion'; questionId: string }
   | { type: 'completeOnboarding'; monthlyBudget: number; acceptedAt: string; landing?: 'takes' }
+  /** Testing shortcut: straight past the first-run flow with sample calls. Leaves the disclaimer unaccepted. */
+  | { type: 'skipOnboarding'; calls: Call[]; topics: Category[] }
   | { type: 'clearLanding' }
   | { type: 'setMonthlyBudget'; monthlyBudget: number }
   | { type: 'addPosition'; position: Position }
@@ -94,6 +96,15 @@ export function reducer(state: AppState, action: Action): AppState {
           monthlyBudget: action.monthlyBudget,
           acceptedDisclaimerAt: action.acceptedAt,
         },
+      };
+    case 'skipOnboarding':
+      return {
+        ...state,
+        calls: action.calls,
+        skips: [],
+        seedTopics: action.topics,
+        pendingLanding: 'takes',
+        profile: { ...state.profile, onboarded: true },
       };
     case 'clearLanding':
       return { ...state, pendingLanding: undefined };

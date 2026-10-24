@@ -63,6 +63,17 @@ describe('calls', () => {
     expect(state.skips).toEqual([]);
   });
 
+  it('skips onboarding for testing with sample calls, landing on takes, without accepting the disclaimer', () => {
+    let state = reducer(initialState, { type: 'skipQuestion', questionId: 'b' });
+    state = reducer(state, { type: 'skipOnboarding', calls: [call('a')], topics: ['tech'] });
+    expect(state.profile).toEqual({ ...initialState.profile, onboarded: true });
+    expect(state.profile.acceptedDisclaimerAt).toBeUndefined();
+    expect(state.calls).toEqual([call('a')]);
+    expect(state.skips).toEqual([]);
+    expect(state.seedTopics).toEqual(['tech']);
+    expect(state.pendingLanding).toBe('takes');
+  });
+
   it('remembers where to land after onboarding until cleared', () => {
     let state = reducer(initialState, {
       type: 'completeOnboarding',
