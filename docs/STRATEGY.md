@@ -169,17 +169,33 @@ Every specialist ranked this first. It's also a compliance control.
 ### 3. The Thesis Tree, an LLM decision tree inside a firewall
 
 _Built in the prototype without the LLM (October 2026), in `src/app/thesis/`:_
-- **Gut check:** one tap on a five-step scale (10% to 90%).
+- **Gut check, then the outside view:** one tap on a five-step scale (10% to
+  90%), then how past cases like this went, e.g. "3 of 7 → 44%". The rate
+  uses Laplace's rule, (hits + 1) ÷ (cases + 2), so a handful of cases never
+  reads as 0% or 100%.
 - **Break it down:** the belief splits into the three parts it depends on.
   Each part has the case for, the strongest case against, and the feed
   question that tests it, if there is one. The user rates each part assuming
   the ones above it hold. Code multiplies them ("90% × 90% × 70% = 57%"),
   sets the result against the gut number, and names the weakest link.
+  The user then picks which number carries forward: their parts, or the
+  parts blended halfway with the outside view.
+- **Pre-mortem:** "It's the end of 2028, and you were wrong. How did it
+  happen?"
+  - Each failure story names the part it breaks and an early warning sign.
+  - Marking a story puts that part up for re-rating on the spot.
+  - The story's warning sign joins the user's kill criteria. Kill criteria
+    are saved with any bet placed from the thesis and shown as "Watch for"
+    in the portfolio.
 - **What follows:** "which means…" steps for both sides, with the side the
-  user leans toward opened first. Rating a step shows the chain ("57% × 75% =
-  43%") and the bets under it, each with why it follows. Beside each bet,
-  "Your chain" sits next to "Market ~X%", with a caption that the bet pays on
-  the stock, not on the chain.
+  user leans toward opened first.
+  - Rating a step shows the chain ("57% × 75% = 43%").
+  - Every step with bets asks "then what?": the response the effect provokes
+    (competitors pile in, supply catches up). The user rates whether the
+    effect lasts until the bets expire anyway, and that multiplies into the
+    bets' chain ("43% × 70% lasts = 30%").
+  - Each bet shows why it follows, with "Your chain" next to "Market ~X%"
+    and a caption that the bet pays on the stock, not on the chain.
 - **The bet screen** shows the reasoning: each link with its number, why this
   bet, and where it could break. "Use my reasoning" turns the chain into a
   first draft of "your why".
@@ -187,8 +203,9 @@ _Built in the prototype without the LLM (October 2026), in `src/app/thesis/`:_
   takes and questions link to the tree they belong to.
 - Five curated trees stand in for the mechanism library. Every bet in the
   catalog is reachable from at least one tree.
-- Not built yet: LLM-proposed steps, the steelman → kill-criteria tap, and
-  checkpoint questions per step.
+- Not built yet: LLM-proposed steps, and checkpoint questions per step. The
+  pre-mortem covers the steelman → kill-criteria idea for a belief's parts,
+  but not for individual steps.
 
 What it does:
 1. **Restate:** the user's belief ("the Gulf stays a mess") becomes a claim
@@ -512,6 +529,9 @@ likely with NFA registration, and no sports, elections or war.
 - The Thesis Tree without the LLM (see section 3): gut check, parts, chain
   math, which-means steps, bets with their why, reasoning on the bet
   screen.
+- Thinking tools in the Thesis Tree: outside view with a blend option,
+  pre-mortem with kill criteria saved on bets, and "then what?" on every
+  step with bets.
 - Copy fixes: "Wrong: lose what you paid", "Expect most to expire worthless.
   Size them so that's fine."
 

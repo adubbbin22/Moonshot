@@ -119,6 +119,7 @@ export default function BetScreen() {
           priced={pricing.priced}
           params={params}
           reasoningText={reasoning?.text}
+          killCriteria={reasoning?.killCriteria}
           onPlaced={setResult}
           lastResult={result}
         />
@@ -132,6 +133,7 @@ function PricedBet({
   priced,
   params,
   reasoningText,
+  killCriteria,
   onPlaced,
   lastResult,
 }: {
@@ -140,6 +142,8 @@ function PricedBet({
   params: Params;
   /** The user's chain as a sentence, offered as a starting point for their why. */
   reasoningText?: string;
+  /** Saved with the position so the user can check them later. */
+  killCriteria?: string[];
   onPlaced: (result: PlaceBetResult) => void;
   lastResult: PlaceBetResult | null;
 }) {
@@ -154,7 +158,14 @@ function PricedBet({
 
   const onPlace = async () => {
     setPlacing(true);
-    const placed = await placeBet({ betId: bet.id, priced, contracts, thesis: why, source: sourceFrom(params) });
+    const placed = await placeBet({
+      betId: bet.id,
+      priced,
+      contracts,
+      thesis: why,
+      source: sourceFrom(params),
+      killCriteria,
+    });
     setPlacing(false);
     onPlaced(placed);
   };

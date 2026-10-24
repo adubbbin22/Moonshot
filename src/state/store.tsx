@@ -10,7 +10,7 @@ import {
 import { CONTRACT_MULTIPLIER, isBullish } from '@/domain/options';
 import { checkStake } from '@/domain/sizing';
 import type { PricedStrategy } from '@/domain/strategy';
-import type { ThesisWork } from '@/domain/thesisTree';
+import { EMPTY_WORK, type ThesisWork } from '@/domain/thesisTree';
 import type { Call, Category, Position, PositionSource, Profile } from '@/domain/types';
 import { paperBroker, type Broker } from '@/services/broker';
 
@@ -46,6 +46,9 @@ export type Action =
   | { type: 'addPosition'; position: Position }
   | { type: 'setGut'; thesisId: string; probability: number }
   | { type: 'rateClaim'; thesisId: string; claimId: string; probability: number }
+  | { type: 'rateLasts'; thesisId: string; stepId: string; probability: number }
+  | { type: 'toggleFailure'; thesisId: string; storyId: string }
+  | { type: 'setBlend'; thesisId: string; blend: boolean }
   | { type: 'resetThesis'; thesisId: string }
   | { type: 'reset' };
 
@@ -57,8 +60,6 @@ export const initialState: AppState = {
   positions: [],
   thesisWork: {},
 };
-
-const EMPTY_WORK: ThesisWork = { ratings: {} };
 
 function updateWork(state: AppState, thesisId: string, update: (work: ThesisWork) => ThesisWork): AppState {
   return { ...state, thesisWork: { ...state.thesisWork, [thesisId]: update(state.thesisWork[thesisId] ?? EMPTY_WORK) } };
@@ -102,6 +103,20 @@ export function reducer(state: AppState, action: Action): AppState {
         ...work,
         ratings: { ...work.ratings, [action.claimId]: action.probability },
       }));
+    case 'rateLasts':
+      return updateWork(state, action.thesisId, (work) => ({
+        ...work,
+        lasts: { ...work.lasts, [action.stepId]: action.probability },
+      }));
+    case 'toggleFailure':
+      return updateWork(state, action.thesisId, (work) => ({
+        ...work,
+        marked: work.marked.includes(action.storyId)
+          ? work.marked.filter((id) => id !== action.storyId)
+          : [...work.marked, action.storyId],
+      }));
+    case 'setBlend':
+      return updateWork(state, action.thesisId, (work) => ({ ...work, blend: action.blend }));
     case 'resetThesis': {
       const thesisWork = { ...state.thesisWork };
       delete thesisWork[action.thesisId];
@@ -142,6 +157,7 @@ export interface PlaceBetInput {
   contracts: number;
   thesis: string;
   source: PositionSource;
+  killCriteria?: string[];
 }
 
 export type PlaceBetResult = { ok: true; position: Position } | { ok: false; reason: string };
@@ -152,7 +168,7 @@ export function usePlaceBet(broker: Broker = paperBroker) {
   const dispatch = useAppDispatch();
 
   return useCallback(
-    async ({ betId, priced, contracts, thesis, source }: PlaceBetInput): Promise<PlaceBetResult> => {
+    async ({ betId, priced, contracts, thesis, source, killCriteria }: PlaceBetInput): Promise<PlaceBetResult> => {
       const check = checkStake(priced.costPerContract * contracts, profile, positions, new Date());
       if (!check.ok) return check;
 
@@ -178,6 +194,7 @@ export function usePlaceBet(broker: Broker = paperBroker) {
         breakeven: isBullish(priced.kind) ? buyStrike + result.fillDebit : buyStrike - result.fillDebit,
         placedAt: result.filledAt,
         thesis: thesis.trim(),
+        ...(killCriteria && killCriteria.length > 0 ? { killCriteria } : {}),
         source,
         status: 'open',
       };

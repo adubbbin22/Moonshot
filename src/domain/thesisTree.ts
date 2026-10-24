@@ -1,5 +1,5 @@
 import { probabilityOfYes } from './calls';
-import type { Call, ClaimCheck, ThesisPremise, ThesisStep, ThesisTree } from './types';
+import type { Call, ClaimCheck, OutsideView, ThesisPremise, ThesisStep, ThesisTree } from './types';
 
 /**
  * First-principles reasoning, as arithmetic the user can check.
@@ -10,6 +10,13 @@ import type { Call, ClaimCheck, ThesisPremise, ThesisStep, ThesisTree } from './
  * "which means…" step is then rated assuming the step before it, and the
  * chain to any step is the product along the path. Plain code owns every
  * number here; content only supplies the claims.
+ *
+ * Three thinking tools sit on top:
+ * - Outside view: how past cases like this went, which the user can blend
+ *   into the number every chain starts from.
+ * - Pre-mortem: failure stories the user marks become their kill criteria.
+ * - Then what?: the chance a step's effect outlasts the response it
+ *   provokes multiplies into the chain for that step's bets.
  */
 
 /** The ratings a user can give. Coarse on purpose: false precision isn't reasoning. */
@@ -26,6 +33,30 @@ export interface ThesisWork {
   /** Their gut number for the belief, before breaking it down. */
   gut?: number;
   ratings: Ratings;
+  /** Step id -> chance the step's effect lasts until its bets expire, despite the response. */
+  lasts: Ratings;
+  /** Pre-mortem stories the user marked as plausible. */
+  marked: string[];
+  /** Carry forward the parts blended with the outside view, instead of the parts alone. */
+  blend?: boolean;
+}
+
+export const EMPTY_WORK: ThesisWork = { ratings: {}, lasts: {}, marked: [] };
+
+export interface OutsideViewRate {
+  hits: number;
+  total: number;
+  /**
+   * Laplace's rule of succession, (hits + 1) / (total + 2): with only a few
+   * cases, the rate is pulled toward even odds instead of landing on 0% or 100%.
+   */
+  rate: number;
+}
+
+export function outsideViewRate(view: OutsideView): OutsideViewRate {
+  const hits = view.cases.filter((c) => c.happened).length;
+  const total = view.cases.length;
+  return { hits, total, rate: (hits + 1) / (total + 2) };
 }
 
 export type Branch = 'ifTrue' | 'ifFalse';
@@ -49,6 +80,16 @@ export function weakestLink(tree: Pick<ThesisTree, 'premises'>, ratings: Ratings
     if (p !== undefined && (weakest === undefined || p < ratings[weakest.id])) weakest = premise;
   }
   return weakest;
+}
+
+/**
+ * The number the chains start from: the parts, or halfway between the parts
+ * and the outside view if the user chose to blend.
+ */
+export function carriedBelief(tree: ThesisTree, ratings: Ratings, blend = false): number | undefined {
+  const parts = builtBelief(tree, ratings);
+  if (parts === undefined || !blend) return parts;
+  return (parts + outsideViewRate(tree.outsideView).rate) / 2;
 }
 
 /** How the parts compare with the gut number. */
@@ -95,8 +136,12 @@ export function findStep(tree: ThesisTree, stepId: string): StepPath | undefined
  * Chance the whole chain to a step holds: the belief (or its failure) times
  * every step on the way. Undefined until all of those are rated.
  */
-export function chainProbability(tree: ThesisTree, ratings: Ratings, stepId: string): number | undefined {
-  const belief = builtBelief(tree, ratings);
+export function chainProbability(
+  tree: ThesisTree,
+  ratings: Ratings,
+  stepId: string,
+  belief: number | undefined = builtBelief(tree, ratings),
+): number | undefined {
   const path = findStep(tree, stepId);
   if (belief === undefined || !path) return undefined;
   let chain = branchProbability(belief, path.branch);
@@ -106,6 +151,30 @@ export function chainProbability(tree: ThesisTree, ratings: Ratings, stepId: str
     chain *= p;
   }
   return chain;
+}
+
+/**
+ * Chance for the bets under a step: the chain to the step, times the chance
+ * its effect lasts until the bets expire despite the response it provokes.
+ * Undefined until that "then what?" is rated, for steps that have one.
+ */
+export function betChain(
+  tree: ThesisTree,
+  ratings: Ratings,
+  lasts: Ratings,
+  stepId: string,
+  belief: number | undefined = builtBelief(tree, ratings),
+): number | undefined {
+  const chain = chainProbability(tree, ratings, stepId, belief);
+  const step = findStep(tree, stepId)?.steps.at(-1);
+  if (chain === undefined || !step?.thenWhat) return chain;
+  const p = lasts[stepId];
+  return p === undefined ? undefined : chain * p;
+}
+
+/** The warning signs from the pre-mortem stories the user marked, in story order. */
+export function killCriteria(tree: Pick<ThesisTree, 'premortem'>, marked: string[]): string[] {
+  return tree.premortem.filter((story) => marked.includes(story.id)).map((story) => story.signal);
 }
 
 /** Every "which means…" step in a tree, depth first, true branch before false. */
@@ -158,21 +227,36 @@ export function treesCheckedBy(trees: ThesisTree[], questionId: string): ThesisT
 }
 
 export interface ReasoningLine {
-  kind: 'belief' | 'not-belief' | 'step';
+  kind: 'belief' | 'not-belief' | 'step' | 'lasts';
+  /** The claim; for 'lasts', the response it has to outlast. */
   claim: string;
-  /** This line's own rating (for the belief: built from its parts). */
+  /** This line's own rating (for the belief: the carried number). */
   probability?: number;
 }
 
-/** The user's reasoning from the belief down to a step, one line per link. */
-export function reasoningLines(tree: ThesisTree, ratings: Ratings, stepId: string): ReasoningLine[] {
+/**
+ * The user's reasoning from the belief down to a step, one line per link.
+ * Pass `lasts` to end with the step's "then what?" when it has one.
+ */
+export function reasoningLines(
+  tree: ThesisTree,
+  ratings: Ratings,
+  stepId: string,
+  options: { belief?: number; lasts?: Ratings } = {},
+): ReasoningLine[] {
   const path = findStep(tree, stepId);
   if (!path) return [];
-  const belief = builtBelief(tree, ratings);
+  const belief = 'belief' in options ? options.belief : builtBelief(tree, ratings);
   const first: ReasoningLine = {
     kind: path.branch === 'ifTrue' ? 'belief' : 'not-belief',
     claim: tree.belief,
     probability: belief === undefined ? undefined : branchProbability(belief, path.branch),
   };
-  return [first, ...path.steps.map((s): ReasoningLine => ({ kind: 'step', claim: s.claim, probability: ratings[s.id] }))];
+  const steps = path.steps.map((s): ReasoningLine => ({ kind: 'step', claim: s.claim, probability: ratings[s.id] }));
+  const target = path.steps[path.steps.length - 1];
+  const lasts: ReasoningLine[] =
+    options.lasts && target.thenWhat
+      ? [{ kind: 'lasts', claim: target.thenWhat, probability: options.lasts[target.id] }]
+      : [];
+  return [first, ...steps, ...lasts];
 }

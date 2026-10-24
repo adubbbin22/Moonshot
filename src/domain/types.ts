@@ -164,7 +164,39 @@ export interface ThesisStep {
   check?: ClaimCheck;
   /** Bets that pay if the chain up to and including this step holds. */
   bets?: ThesisBetLink[];
+  /**
+   * Second-order effect: the response this step provokes that could undo it
+   * before the bets expire (competitors pile in, supply catches up).
+   * Required on every step with bets.
+   */
+  thenWhat?: string;
   next?: ThesisStep[];
+}
+
+/** A past case in the belief's reference class, and whether it went the way the belief says. */
+export interface ReferenceCase {
+  label: string;
+  happened: boolean;
+  /** One line on what actually happened. */
+  note: string;
+}
+
+/** The outside view: how cases like this one have gone before. */
+export interface OutsideView {
+  /** The reference class, as a question: "When … did it …?" */
+  question: string;
+  cases: ReferenceCase[];
+}
+
+/** Pre-mortem: one way the belief turns out wrong, the part it breaks, and the early sign to watch. */
+export interface FailureStory {
+  id: string;
+  /** Told from the future, after the fact. */
+  story: string;
+  /** Id of the premise this story breaks. */
+  breaks: string;
+  /** An observable early warning: becomes a kill criterion if the user marks the story. */
+  signal: string;
 }
 
 /**
@@ -183,7 +215,11 @@ export interface ThesisTree {
   category: Category;
   /** The belief, stated as a claim that could turn out true or false. */
   belief: string;
+  /** When the belief is settled, for the pre-mortem: "the end of 2028". */
+  settledBy: string;
+  outsideView: OutsideView;
   premises: ThesisPremise[];
+  premortem: FailureStory[];
   /** What follows if the belief is true. */
   ifTrue: ThesisStep[];
   /** What follows if it isn't. */
@@ -220,6 +256,8 @@ export interface Position {
   placedAt: string;
   /** The user's own "why" for the bet, in their words. */
   thesis: string;
+  /** Warning signs the user picked in a pre-mortem: if one shows up, the reasoning is breaking. */
+  killCriteria?: string[];
   source: PositionSource;
   status: 'open' | 'closed';
 }

@@ -7,7 +7,7 @@ import { colors, spacing } from '@/theme/tokens';
 
 /** "Why this bet": the user's chain from their belief to this bet, and where it could break. */
 export function ReasoningCard({ reasoning, marketOdds }: { reasoning: Reasoning; marketOdds?: number }) {
-  const { lines, chain, why, path } = reasoning;
+  const { lines, chain, why, path, killCriteria } = reasoning;
   return (
     <Card style={styles.card}>
       <Text variant="label" tone="muted">
@@ -23,12 +23,16 @@ export function ReasoningCard({ reasoning, marketOdds }: { reasoning: Reasoning;
               <Text variant="caption" tone="faint">
                 It doesn’t happen:
               </Text>
+            ) : line.kind === 'lasts' ? (
+              <Text variant="caption" tone="faint">
+                Then what? It lasts until expiry despite:
+              </Text>
             ) : i > 0 ? (
               <Text variant="caption" tone="faint">
                 Which means
               </Text>
             ) : null}
-            <Text>{line.claim}</Text>
+            <Text tone={line.kind === 'lasts' ? 'muted' : 'default'}>{line.claim}</Text>
           </View>
           <Text variant="label" style={styles.yours}>
             {line.probability === undefined ? '–' : formatPercent(line.probability)}
@@ -66,6 +70,16 @@ export function ReasoningCard({ reasoning, marketOdds }: { reasoning: Reasoning;
           </Text>
         ))}
       </View>
+      {killCriteria.length > 0 ? (
+        <View style={styles.block}>
+          <Text variant="caption" tone="faint">
+            Your kill criteria, from your pre-mortem
+          </Text>
+          {killCriteria.map((signal) => (
+            <Text key={signal}>• {signal}</Text>
+          ))}
+        </View>
+      ) : null}
     </Card>
   );
 }

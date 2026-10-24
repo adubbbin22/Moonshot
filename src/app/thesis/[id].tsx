@@ -5,6 +5,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { LikelihoodPicker } from '@/components/LikelihoodPicker';
 import { BuiltBeliefCard } from '@/components/thesis/BuiltBeliefCard';
 import { ClaimCard } from '@/components/thesis/ClaimCard';
+import { OutsideViewCard } from '@/components/thesis/OutsideViewCard';
+import { Premortem } from '@/components/thesis/Premortem';
 import { BranchSection } from '@/components/thesis/StepTree';
 import { Button, Card, Screen, Text } from '@/components/ui';
 import { leaningBranch } from '@/domain/thesisTree';
@@ -14,18 +16,23 @@ import { formatPercent } from '@/lib/format';
 import { catalog } from '@/services/catalog';
 import { colors, radius, spacing } from '@/theme/tokens';
 
-type Stage = 'gut' | 'parts' | 'follows';
+type Stage = 'gut' | 'parts' | 'premortem' | 'follows';
 
 const STAGES: { id: Stage; label: string }[] = [
   { id: 'gut', label: 'Gut check' },
   { id: 'parts', label: 'Break it down' },
+  { id: 'premortem', label: 'Pre-mortem' },
   { id: 'follows', label: 'What follows' },
 ];
 
 /**
- * A thesis tree: gut check, then break the belief into the parts it depends
- * on, then follow what it means, step by step, down to the bets that pay if
- * the chain holds.
+ * A thesis tree, as structured thinking:
+ * 1. Gut check, then the outside view: how past cases like this went.
+ * 2. Break it down: the parts the belief depends on, rated and multiplied.
+ * 3. Pre-mortem: assume it turned out wrong; the stories that could happen
+ *    become kill criteria.
+ * 4. What follows: "which means…" steps, each with its "then what?", down
+ *    to the bets that pay if the chain holds.
  */
 export default function ThesisScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -48,6 +55,7 @@ function ThesisFlow({ tree }: { tree: ThesisTree }) {
   const reached: Record<Stage, boolean> = {
     gut: true,
     parts: work.gut !== undefined,
+    premortem: work.belief !== undefined,
     follows: work.belief !== undefined,
   };
   const stageBar = <StageBar stage={stage} reached={reached} onSelect={setStage} />;
@@ -66,11 +74,12 @@ function ThesisFlow({ tree }: { tree: ThesisTree }) {
         </Text>
         <Text variant="title">{tree.belief}</Text>
         <Text tone="muted">
-          Start with your gut. Then break it into the parts it depends on and see whether they agree.
+          Start with your gut. Then see how past cases like this went, and break it into the parts it depends on.
         </Text>
         <Card>
           <LikelihoodPicker prompt="How likely is it?" value={work.gut} onChange={work.setGut} />
         </Card>
+        {work.gut !== undefined ? <OutsideViewCard view={tree.outsideView} rate={work.outside} gut={work.gut} /> : null}
       </Screen>
     );
   }
@@ -81,7 +90,7 @@ function ThesisFlow({ tree }: { tree: ThesisTree }) {
       <Screen
         key="parts"
         edges={['bottom']}
-        footer={<Button label="See what follows" disabled={!reached.follows} onPress={() => setStage('follows')} />}>
+        footer={<Button label="Run a pre-mortem" disabled={!reached.premortem} onPress={() => setStage('premortem')} />}>
         {stageBar}
         <Text variant="caption" tone="faint">
           {tree.emoji} {tree.belief}
@@ -106,7 +115,42 @@ function ThesisFlow({ tree }: { tree: ThesisTree }) {
             onRate={(p) => work.rate(premise.id, p)}
           />
         ))}
-        <BuiltBeliefCard tree={tree} ratings={work.ratings} gut={work.gut} />
+        <BuiltBeliefCard
+          tree={tree}
+          ratings={work.ratings}
+          gut={work.gut}
+          outside={work.outside}
+          blend={work.blend}
+          onBlend={work.setBlend}
+        />
+      </Screen>
+    );
+  }
+
+  if (stage === 'premortem') {
+    return (
+      <Screen
+        key="premortem"
+        edges={['bottom']}
+        footer={<Button label="See what follows" onPress={() => setStage('follows')} />}>
+        {stageBar}
+        <Text variant="caption" tone="faint">
+          {tree.emoji} {tree.belief}
+        </Text>
+        <Text variant="title">Pre-mortem</Text>
+        <Text tone="muted">
+          It’s {tree.settledBy}, and you were wrong. Which of these is how it happened? Mark any that could, and
+          re-rate the part each one breaks.
+        </Text>
+        <Premortem
+          tree={tree}
+          ratings={work.ratings}
+          marked={work.marked}
+          killCriteria={work.killCriteria}
+          belief={work.belief}
+          onToggle={work.toggleFailure}
+          onRate={work.rate}
+        />
       </Screen>
     );
   }
@@ -118,7 +162,9 @@ function ThesisFlow({ tree }: { tree: ThesisTree }) {
     belief: work.belief,
     ratings: work.ratings,
     fromCalls: work.fromCalls,
+    lasts: work.lasts,
     onRate: work.rate,
+    onRateLasts: work.rateLasts,
     onOpenBet: (bet: { id: string }, step: { id: string }) =>
       router.push({ pathname: '/bet/[id]', params: { id: bet.id, thesisId: tree.id, stepId: step.id } }),
   };
@@ -134,14 +180,23 @@ function ThesisFlow({ tree }: { tree: ThesisTree }) {
         <View style={styles.beliefNumber}>
           <Text variant="title">{formatPercent(work.belief)}</Text>
           <Text variant="caption" tone="faint">
-            built from {tree.premises.length} parts
+            {work.blend
+              ? `your ${tree.premises.length} parts blended with past cases`
+              : `built from ${tree.premises.length} parts`}
           </Text>
         </View>
+        {work.killCriteria.length > 0 ? (
+          <Text variant="caption" tone="muted">
+            {work.killCriteria.length} kill {work.killCriteria.length === 1 ? 'criterion' : 'criteria'} from your
+            pre-mortem
+          </Text>
+        ) : null}
         <Button label="Revisit the parts" variant="secondary" onPress={() => setStage('parts')} />
       </Card>
       <Text tone="muted">
-        Now follow what it means. Rate each step assuming the one above it holds; your chain multiplies them. Under
-        each step are the bets that pay if the chain to there holds, the same for anyone who gets there.
+        Now follow what it means. Rate each step assuming the one above it holds; your chain multiplies them. Where
+        a step has bets, ask “then what?”: every effect provokes a response, and the effect has to outlast it until
+        the bets expire.
       </Text>
       <Text variant="caption" tone="faint">
         A bet’s market number is what its price implies about the stock. The bet pays on the stock price, not on your

@@ -1,10 +1,14 @@
 import {
   allSteps,
+  betChain,
   builtBelief,
+  carriedBelief,
   chainProbability,
   findStep,
   gutCheck,
+  killCriteria,
   leaningBranch,
+  outsideViewRate,
   reasoningLines,
   treeBetIds,
   treesCheckedBy,
@@ -20,6 +24,19 @@ const tree: ThesisTree = {
   emoji: '🤖',
   category: 'tech',
   belief: 'AI does real work',
+  settledBy: 'the end of 2028',
+  outsideView: {
+    question: 'When a technology was hailed, did it deliver?',
+    cases: [
+      { label: 'A', happened: true, note: 'yes' },
+      { label: 'B', happened: false, note: 'no' },
+      { label: 'C', happened: false, note: 'no' },
+    ],
+  },
+  premortem: [
+    { id: 'stall', story: 'Progress stalled', breaks: 'better', signal: 'Flat benchmarks' },
+    { id: 'pricey', story: 'It stayed pricey', breaks: 'cheap', signal: 'Prices stop falling' },
+  ],
   premises: [
     { id: 'better', claim: 'Models get better', why: 'w', against: 'a', check: { questionId: 'q-better', side: 'yes' } },
     { id: 'cheap', claim: 'It gets cheap', why: 'w', against: 'a' },
@@ -32,6 +49,7 @@ const tree: ThesisTree = {
       because: 'b',
       against: 'a',
       bets: [{ betId: 'nvda', why: 'chips' }],
+      thenWhat: 'Competitors pile in',
       next: [
         {
           id: 'power',
@@ -166,5 +184,51 @@ describe('reasoningLines', () => {
     const [first] = reasoningLines(tree, rated, 'bust');
     expect(first.kind).toBe('not-belief');
     expect(first.probability).toBeCloseTo(0.685);
+  });
+});
+
+describe('outside view', () => {
+  it('pulls a small sample toward even odds (Laplace)', () => {
+    expect(outsideViewRate(tree.outsideView)).toEqual({ hits: 1, total: 3, rate: 0.4 });
+  });
+
+  it('blends with the parts only when asked', () => {
+    expect(carriedBelief(tree, rated)).toBeCloseTo(0.315);
+    expect(carriedBelief(tree, rated, true)).toBeCloseTo((0.315 + 0.4) / 2);
+    expect(carriedBelief(tree, { better: 0.9 }, true)).toBeUndefined();
+  });
+
+  it('starts every chain from the carried number', () => {
+    const blended = carriedBelief(tree, rated, true);
+    expect(chainProbability(tree, { ...rated, compute: 0.8 }, 'compute', blended)).toBeCloseTo(0.3575 * 0.8);
+  });
+});
+
+describe('then what?', () => {
+  const ratings = { ...rated, compute: 0.8, power: 0.5 };
+
+  it('multiplies the chance the effect lasts into the chain for the bets', () => {
+    expect(betChain(tree, ratings, { compute: 0.5 }, 'compute')).toBeCloseTo(0.315 * 0.8 * 0.5);
+  });
+
+  it('waits for the "then what?" on steps that have one', () => {
+    expect(betChain(tree, ratings, {}, 'compute')).toBeUndefined();
+  });
+
+  it('is just the chain for steps without one', () => {
+    expect(betChain(tree, ratings, {}, 'power')).toBeCloseTo(0.315 * 0.8 * 0.5);
+  });
+
+  it('ends the reasoning with the response the effect has to outlast', () => {
+    const lines = reasoningLines(tree, ratings, 'compute', { belief: 0.315, lasts: { compute: 0.6 } });
+    expect(lines.at(-1)).toEqual({ kind: 'lasts', claim: 'Competitors pile in', probability: 0.6 });
+    expect(reasoningLines(tree, ratings, 'power', { lasts: {} }).some((l) => l.kind === 'lasts')).toBe(false);
+  });
+});
+
+describe('pre-mortem', () => {
+  it('turns marked stories into kill criteria, in story order', () => {
+    expect(killCriteria(tree, ['pricey', 'stall'])).toEqual(['Flat benchmarks', 'Prices stop falling']);
+    expect(killCriteria(tree, [])).toEqual([]);
   });
 });

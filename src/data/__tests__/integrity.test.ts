@@ -135,6 +135,34 @@ describe('thesis trees', () => {
     }
   });
 
+  it.each(THESES.map((t) => [t.id, t] as const))('%s has an outside view to check the gut against', (_id, tree) => {
+    expect(tree.settledBy.trim()).not.toBe('');
+    expect(tree.outsideView.question.trim()).not.toBe('');
+    expect(tree.outsideView.cases.length).toBeGreaterThanOrEqual(3);
+    for (const c of tree.outsideView.cases) {
+      expect(c.label.trim()).not.toBe('');
+      expect(c.note.trim()).not.toBe('');
+    }
+  });
+
+  it.each(THESES.map((t) => [t.id, t] as const))('%s has a pre-mortem whose stories break real parts', (_id, tree) => {
+    const premiseIds = new Set(tree.premises.map((p) => p.id));
+    expect(tree.premortem.length).toBeGreaterThanOrEqual(2);
+    expect(duplicates(tree.premortem.map((f) => f.id))).toEqual([]);
+    for (const story of tree.premortem) {
+      expect(premiseIds.has(story.breaks)).toBe(true);
+      expect(story.story.trim()).not.toBe('');
+      expect(story.signal.trim()).not.toBe('');
+    }
+  });
+
+  it.each(THESES.map((t) => [t.id, t] as const))('%s asks "then what?" on every step with bets', (_id, tree) => {
+    const missing = allSteps(tree)
+      .filter((s) => (s.bets ?? []).length > 0 && !s.thenWhat?.trim())
+      .map((s) => s.id);
+    expect(missing).toEqual([]);
+  });
+
   it('give every bet in the catalog a line of reasoning', () => {
     const reachable = new Set(THESES.flatMap(treeBetIds));
     expect(BETS.map((b) => b.id).filter((id) => !reachable.has(id))).toEqual([]);

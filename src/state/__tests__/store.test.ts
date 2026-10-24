@@ -83,8 +83,8 @@ describe('thesis work', () => {
     state = reducer(state, { type: 'rateClaim', thesisId: 'ai', claimId: 'better', probability: 0.9 });
     state = reducer(state, { type: 'rateClaim', thesisId: 'energy', claimId: 'demand', probability: 0.3 });
     expect(state.thesisWork).toEqual({
-      ai: { gut: 0.7, ratings: { better: 0.9 } },
-      energy: { ratings: { demand: 0.3 } },
+      ai: { gut: 0.7, ratings: { better: 0.9 }, lasts: {}, marked: [] },
+      energy: { ratings: { demand: 0.3 }, lasts: {}, marked: [] },
     });
   });
 
@@ -92,6 +92,15 @@ describe('thesis work', () => {
     let state = reducer(initialState, { type: 'rateClaim', thesisId: 'ai', claimId: 'better', probability: 0.9 });
     state = reducer(state, { type: 'rateClaim', thesisId: 'energy', claimId: 'demand', probability: 0.3 });
     state = reducer(state, { type: 'resetThesis', thesisId: 'ai' });
-    expect(state.thesisWork).toEqual({ energy: { ratings: { demand: 0.3 } } });
+    expect(state.thesisWork).toEqual({ energy: { ratings: { demand: 0.3 }, lasts: {}, marked: [] } });
+  });
+
+  it('records the thinking tools: then-what ratings, pre-mortem marks and the blend choice', () => {
+    let state = reducer(initialState, { type: 'rateLasts', thesisId: 'ai', stepId: 'compute', probability: 0.5 });
+    state = reducer(state, { type: 'toggleFailure', thesisId: 'ai', storyId: 'stall' });
+    state = reducer(state, { type: 'toggleFailure', thesisId: 'ai', storyId: 'pricey' });
+    state = reducer(state, { type: 'toggleFailure', thesisId: 'ai', storyId: 'stall' });
+    state = reducer(state, { type: 'setBlend', thesisId: 'ai', blend: true });
+    expect(state.thesisWork.ai).toEqual({ ratings: {}, lasts: { compute: 0.5 }, marked: ['pricey'], blend: true });
   });
 });

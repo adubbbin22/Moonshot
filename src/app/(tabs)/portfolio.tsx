@@ -71,6 +71,18 @@ function PositionCard({ position }: { position: Position }) {
           “{position.thesis}”
         </Text>
       ) : null}
+      {position.killCriteria ? (
+        <View style={styles.watch}>
+          <Text variant="caption" tone="faint">
+            Watch for
+          </Text>
+          {position.killCriteria.map((signal) => (
+            <Text key={signal} variant="caption" tone="muted">
+              • {signal}
+            </Text>
+          ))}
+        </View>
+      ) : null}
       <Text variant="caption" tone="faint">
         Breakeven {formatPrice(Math.round(position.breakeven * 100) / 100)} · Placed{' '}
         {new Date(position.placedAt).toLocaleDateString()}
@@ -84,4 +96,5 @@ const styles = StyleSheet.create({
   positionHeader: { flexDirection: 'row', gap: spacing.md },
   positionTitle: { flex: 1, gap: spacing.xs },
   positionStake: { alignItems: 'flex-end', gap: spacing.xs },
+  watch: { gap: 2 },
 });

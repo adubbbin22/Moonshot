@@ -19,11 +19,15 @@ own it and what would prove you wrong.
   the bets that pay off if you're right.
 - **Thesis builder:** start from a big belief ("Do you believe in AI?") and
   reason it through from first principles:
-  - give your gut number;
+  - give your gut number, then see how past cases like it went (the outside
+    view);
   - break the belief into the parts it depends on, each with the case for and
     the case against, and rate each one;
-  - follow "which means…" steps down to the bets that pay if your chain holds,
-    each with why it follows and where it could break.
+  - run a pre-mortem: assume you were wrong, mark the stories that could
+    happen, and their warning signs become your kill criteria;
+  - follow "which means…" steps down to the bets that pay if your chain holds.
+    Each step asks "then what?": does the effect outlast the response it
+    provokes until the bets expire?
 
   Code multiplies your ratings, so you see when the whole belief is less
   likely than it felt.

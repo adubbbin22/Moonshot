@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { Card, Screen, Text } from '@/components/ui';
-import { builtBelief, weakestLink, withCallRatings } from '@/domain/thesisTree';
+import { carriedBelief, weakestLink, withCallRatings } from '@/domain/thesisTree';
 import { formatPercent } from '@/lib/format';
 import { catalog } from '@/services/catalog';
 import { useAppState } from '@/state/store';
@@ -17,8 +17,9 @@ export default function ThesesScreen() {
       title="Build a thesis"
       subtitle="Break a belief into the parts it depends on, follow what it means, and see the bets that pay if you’re right.">
       {catalog.listTheses().map((tree) => {
-        const { ratings } = withCallRatings(tree, thesisWork[tree.id]?.ratings ?? {}, calls);
-        const belief = builtBelief(tree, ratings);
+        const work = thesisWork[tree.id];
+        const { ratings } = withCallRatings(tree, work?.ratings ?? {}, calls);
+        const belief = carriedBelief(tree, ratings, work?.blend);
         const weakest = weakestLink(tree, ratings);
         return (
           <Card

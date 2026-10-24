@@ -35,6 +35,14 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
       failure, times every step on the way).
     - Also: the weakest link, the gut check, and filling ratings from the
       user's calls on the questions that test a claim.
+    - Thinking tools:
+      - `outsideViewRate` gives the base rate using Laplace's rule.
+      - `carriedBelief` gives the parts, optionally blended halfway with the
+        base rate.
+      - `betChain` multiplies the chain by the chance a step's effect
+        outlasts its "then what?".
+      - `killCriteria` collects the warning signs of the pre-mortem stories
+        the user marked.
   - The cold start (see [STRATEGY.md](STRATEGY.md#cold-start-from-a-stranger-to-ways-to-express-built)):
     - `calls.ts`: a call is a side plus a probability (presets 60/75/90%), and
       its conviction.
@@ -86,7 +94,8 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
 - **`state/store.tsx`** is a React context with a plain reducer. It holds:
   - the profile (budget, per-bet cap, onboarded);
   - positions, with legs, contracts, cost and breakeven;
-  - the user's work on each thesis tree (gut number and ratings);
+  - the user's work on each thesis tree: gut number, ratings, "then what?"
+    ratings, marked pre-mortem stories and the blend choice;
   - calls, skips and seed topics.
 
   `usePlaceBet` enforces the budget before calling the broker, and
@@ -100,6 +109,9 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
   - a referenced bet is missing;
   - a thesis tree links a missing bet or question, leaves a claim without
     its case against, or puts a price in a bet's why;
+  - a tree lacks an outside view with at least three cases, has a
+    pre-mortem story that breaks no real part, or has a step with bets but
+    no "then what?";
   - a bet in the catalog isn't reachable from any thesis tree, so it would
     have no line of reasoning.
 
