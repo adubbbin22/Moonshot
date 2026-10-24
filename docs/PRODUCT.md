@@ -1,5 +1,9 @@
 # Moonshot: product notes
 
+> **Update (October 2026):** a four-specialist review recommends refocusing on
+> forecasting first, with options bets as the paid way to act on a view. See
+> [STRATEGY.md](STRATEGY.md). Where the two disagree, STRATEGY.md is newer.
+
 ## The idea
 
 Passive index investing is the right default for most of your money. Moonshot

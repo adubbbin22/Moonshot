@@ -42,7 +42,7 @@ Docs: https://docs.expo.dev/eas/index.md
 
 ## Moonshot specifics
 
-- Product principles: `docs/PRODUCT.md`. Market data sourcing and licensing: `docs/DATA.md`. Code layout and backend plan: `docs/ARCHITECTURE.md`.
+- Product direction: `docs/STRATEGY.md` (newest; supersedes PRODUCT.md where they differ). Product principles: `docs/PRODUCT.md`. Market data sourcing and licensing: `docs/DATA.md`. Code layout and backend plan: `docs/ARCHITECTURE.md`.
 - Every bet is a long option or a debit spread: defined risk, at least 3x payoff. `validateStructure` and `isAsymmetric` enforce this; keep them tested.
 - Prices only come through `src/services/marketData/` (see `docs/DATA.md`). Never ship vendor API keys in the app bundle.
 - `server/` is the Yahoo Finance demo server (Node, run with `npm run market-data`). Keep `yahoo-finance2` out of app code under `src/`.

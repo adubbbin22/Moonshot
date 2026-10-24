@@ -27,6 +27,9 @@ shows the odds of each outcome implied by today's option prices. You pick how
 many contracts fit your monthly budget and write down your "why".
 
 Docs:
+- [docs/STRATEGY.md](docs/STRATEGY.md): **where the product should go next**,
+  from a two-round review by a designer, a fintech expert, a prediction-market
+  specialist and a growth marketer (memos in `docs/review/`).
 - [docs/PRODUCT.md](docs/PRODUCT.md): principles, which option structures
   are allowed and why, and open questions.
 - [docs/DATA.md](docs/DATA.md): **where real options data comes from**:
