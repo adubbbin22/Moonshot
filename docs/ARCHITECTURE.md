@@ -69,8 +69,14 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
   via `hooks/useYourOdds`). `repeatBet` is the same bet n times as a
   binomial. Deterministic for a seed; tested against the analytic odds.
 - **Prediction markets** (`services/predictionMarkets/`, `domain/arbitrage.ts`):
-  quotes come from our backend (`proxy`) or are samples; the app never calls
-  a venue. `venueArbitrage` prices YES at one venue plus NO at the other
+  quotes come from our backend (`proxy`), or without one from
+  `data/predictionSnapshots.ts` (real prices captured by hand, served with
+  the date they were taken, `basis: 'snapshot'`) and `data/predictionSamples.ts`
+  (made up, `basis: 'sample'`); the app never calls a venue. A market ref
+  carries `match`: `same` means the venue asks our question, `related`
+  means it's the closest thing listed, with a `note` on the difference.
+  Only `same` quotes feed the crowd number, the event-vs-options
+  comparison and the arbitrage; related ones are shown for reference. `venueArbitrage` prices YES at one venue plus NO at the other
   (any gap is an edge before fees; `ESTIMATED_FEES` decides if it survives),
   and `eventVsOptions` turns the pair of event odds and options odds into
   the link the options price assumes: how often the stock must follow the

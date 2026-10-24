@@ -26,8 +26,11 @@ export interface VsVenueCardProps {
  * needs to go right. Kalshi first when it's quoted; Polymarket otherwise.
  */
 export function VsVenueCard({ priced, contracts, question, side, quotes, call }: VsVenueCardProps) {
-  const quote = quotes.find((q) => q.venue === 'kalshi') ?? quotes[0];
+  const same = quotes.filter((q) => (q.match ?? 'same') === 'same');
+  const pool = same.length > 0 ? same : quotes;
+  const quote = pool.find((q) => q.venue === 'kalshi') ?? pool[0];
   if (!quote) return null;
+  const related = (quote.match ?? 'same') === 'related';
   const stake = priced.costPerContract * contracts;
   const venue = venueStake(quote, side, stake);
   if (!venue) return null;
@@ -47,10 +50,15 @@ export function VsVenueCard({ priced, contracts, question, side, quotes, call }:
         <Text variant="label" tone="muted">
           This bet vs. a {venueName} bet
         </Text>
-        {quote.basis === 'sample' ? <Chip label="Sample odds" color={colors.no} /> : null}
+        {quote.basis === 'sample' ? (
+          <Chip label="Sample odds" color={colors.no} />
+        ) : quote.basis === 'snapshot' ? (
+          <Chip label={`Snapshot · ${formatDate(quote.asOf)}`} color={colors.violet} />
+        ) : null}
       </View>
       <Text variant="caption" tone="faint">
         Put the same {formatMoney(stake)} on each.
+        {related ? ` ${venueName} doesn’t list this exact question; this is its closest market.` : ''}
       </Text>
 
       <View style={styles.columns}>
@@ -60,7 +68,7 @@ export function VsVenueCard({ priced, contracts, question, side, quotes, call }:
             ['Buys', `${venue.contracts} contracts`],
             ['Pays if right', `${formatMoney(venue.payout)} · ${formatMultiple(venue.multiple)}`],
             ['Odds', `Crowd: ${formatPercent(venue.price)}`],
-            ['Needs', `The question to resolve ${sideLabel} by ${formatDate(question.resolution.resolvesOn)}`],
+            ['Needs', related ? `“${quote.title}” to resolve ${sideLabel}` : `The question to resolve ${sideLabel} by ${formatDate(question.resolution.resolvesOn)}`],
           ]}
         />
         <Column
@@ -93,8 +101,13 @@ export function VsVenueCard({ priced, contracts, question, side, quotes, call }:
             : `You roughly agree with the crowd on the event, so this bet only makes sense if your edge is in the stock.`}
         </Text>
       ) : null}
+      {related && quote.note ? (
+        <Text variant="caption" tone="muted">
+          How it differs: {quote.note} So the odds aren’t directly comparable; the dollars are.
+        </Text>
+      ) : null}
       <Text variant="caption" tone="faint">
-        Before fees. {venueName} contracts pay $1 each when the question resolves; this bet is paper and pays at expiry.
+        Before fees. {venueName} contracts pay $1 each when the market resolves; this bet is paper and pays at expiry.
       </Text>
     </Card>
   );

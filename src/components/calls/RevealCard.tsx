@@ -78,12 +78,17 @@ function PredictionLine({ question, side }: { question: EventQuestion; side: Cal
   if (state.status !== 'ready' || state.quotes.length === 0) return null;
   const label = (venue: string) => (venue === 'kalshi' ? 'Kalshi' : 'Polymarket');
   const sample = state.quotes.some((q) => q.basis === 'sample');
+  const snapshot = state.quotes.some((q) => q.basis === 'snapshot');
+  const related = state.quotes.some((q) => q.match === 'related');
   return (
     <View style={styles.row}>
       <Text variant="label">Prediction markets</Text>
       <Text variant="caption" tone="faint">
-        {state.quotes.map((q) => `${label(q.venue)} ${formatPercent(side === 'yes' ? q.yes : 1 - q.yes)}`).join(' · ')}
-        {sample ? ' (sample)' : ''}
+        {state.quotes
+          .map((q) => `${label(q.venue)} ${formatPercent(side === 'yes' ? q.yes : 1 - q.yes)}${q.match === 'related' ? '*' : ''}`)
+          .join(' · ')}
+        {sample ? ' (sample)' : snapshot ? ' (snapshot)' : ''}
+        {related ? ' · *closest market, not this exact question' : ''}
       </Text>
     </View>
   );

@@ -4,7 +4,7 @@ import { Card, Chip, Text } from '@/components/ui';
 import { edgeOverCrowd, ESTIMATED_FEES, eventVsOptions, sideProbability, venueArbitrage } from '@/domain/arbitrage';
 import type { Call, EventQuestion, PredictionQuote, Side } from '@/domain/types';
 import { usePredictionQuotes } from '@/hooks/usePredictionQuotes';
-import { formatPercent } from '@/lib/format';
+import { formatDate, formatPercent } from '@/lib/format';
 import { colors, spacing } from '@/theme/tokens';
 
 const VENUE_LABELS = { kalshi: 'Kalshi', polymarket: 'Polymarket' } as const;
@@ -20,11 +20,23 @@ export interface PredictionOddsProps {
 const cents = (p: number) => `${Math.round(p * 100)}¢`;
 const points = (p: number) => `${Math.round(Math.abs(p) * 100)} ${Math.round(Math.abs(p) * 100) === 1 ? 'pt' : 'pts'}`;
 
+/** Quotes that ask this question, as opposed to the closest thing a venue lists. */
+export const sameClaim = (quotes: PredictionQuote[]) => quotes.filter((q) => (q.match ?? 'same') === 'same');
+
+/** One chip for where the odds came from: live, a dated snapshot, or made up. */
+export function BasisChip({ quotes }: { quotes: PredictionQuote[] }) {
+  if (quotes.some((q) => q.basis === 'sample')) return <Chip label="Sample odds, not real" color={colors.no} />;
+  const snapshot = quotes.find((q) => q.basis === 'snapshot');
+  if (snapshot) return <Chip label={`Snapshot · ${formatDate(snapshot.asOf)}`} color={colors.violet} />;
+  return null;
+}
+
 /**
  * Prediction-market odds for a question, the gap between venues (a real
  * arbitrage, before fees), and the comparison with the linked options bet:
  * how often the stock would have to follow the event for the options price
- * to be fair.
+ * to be fair. Markets that only come close to the question are shown with
+ * how they differ, and kept out of the arithmetic.
  */
 export function PredictionOdds({ question, side, call, optionsOdds }: PredictionOddsProps) {
   const state = usePredictionQuotes(question);
@@ -44,12 +56,12 @@ export function PredictionOdds({ question, side, call, optionsOdds }: Prediction
   const { quotes } = state;
   if (quotes.length === 0) return null;
 
-  const sample = quotes.some((q) => q.basis === 'sample');
+  const comparable = sameClaim(quotes);
   const sideLabel = side === 'yes' ? 'Yes' : 'No';
-  const crowd = quotes.reduce((s, q) => s + q.yes, 0) / quotes.length;
-  const pEvent = sideProbability(crowd, side);
-  const arb = venueArbitrage(quotes);
-  const evo = optionsOdds !== undefined ? eventVsOptions(pEvent, optionsOdds) : undefined;
+  const crowd = comparable.length > 0 ? comparable.reduce((s, q) => s + q.yes, 0) / comparable.length : undefined;
+  const pEvent = crowd === undefined ? undefined : sideProbability(crowd, side);
+  const arb = venueArbitrage(comparable);
+  const evo = optionsOdds !== undefined && pEvent !== undefined ? eventVsOptions(pEvent, optionsOdds) : undefined;
 
   return (
     <Card>
@@ -57,11 +69,17 @@ export function PredictionOdds({ question, side, call, optionsOdds }: Prediction
         <Text variant="label" tone="muted">
           Prediction markets
         </Text>
-        {sample ? <Chip label="Sample odds, not real" color={colors.no} /> : null}
+        <BasisChip quotes={quotes} />
       </View>
       {quotes.map((q) => (
         <QuoteRow key={`${q.venue}:${q.id}`} quote={q} side={side} />
       ))}
+      {comparable.length === 0 ? (
+        <Text variant="caption" tone="faint">
+          No venue lists this exact question. The closest markets are shown for reference; their odds answer a different question, so
+          they aren’t compared with the options bet.
+        </Text>
+      ) : null}
 
       {arb ? (
         <View style={styles.block}>
@@ -81,7 +99,7 @@ export function PredictionOdds({ question, side, call, optionsOdds }: Prediction
         </View>
       ) : null}
 
-      {evo ? (
+      {evo && pEvent !== undefined ? (
         <View style={styles.block}>
           <Text variant="caption" tone="faint">
             Event odds vs. the options bet
@@ -103,7 +121,7 @@ export function PredictionOdds({ question, side, call, optionsOdds }: Prediction
         </View>
       ) : null}
 
-      {call ? (
+      {call && pEvent !== undefined ? (
         <View style={styles.block}>
           <Text variant="caption" tone="faint">
             You vs. the crowd
@@ -125,15 +143,24 @@ export function PredictionOdds({ question, side, call, optionsOdds }: Prediction
 
 function QuoteRow({ quote, side }: { quote: PredictionQuote; side: Side }) {
   const p = sideProbability(quote.yes, side);
+  const related = (quote.match ?? 'same') === 'related';
   return (
     <View style={styles.quote}>
       <View style={styles.quoteText}>
-        <Text variant="label">
-          {VENUE_LABELS[quote.venue]} · {formatPercent(p)} {side === 'yes' ? 'Yes' : 'No'}
-        </Text>
+        <View style={styles.quoteTitle}>
+          <Text variant="label">
+            {VENUE_LABELS[quote.venue]} · {formatPercent(p)} {side === 'yes' ? 'Yes' : 'No'}
+          </Text>
+          {related ? <Chip label="Closest market" /> : null}
+        </View>
         <Text variant="caption" tone="faint">
           {quote.title}
         </Text>
+        {quote.note ? (
+          <Text variant="caption" tone="muted">
+            {quote.note}
+          </Text>
+        ) : null}
       </View>
     </View>
   );
@@ -143,5 +170,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   quote: { flexDirection: 'row', gap: spacing.md },
   quoteText: { flex: 1, gap: 2 },
+  quoteTitle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   block: { gap: spacing.xs },
 });

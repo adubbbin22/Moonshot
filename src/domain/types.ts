@@ -116,19 +116,27 @@ export type PredictionVenue = 'kalshi' | 'polymarket';
 /** A prediction-market contract that asks (close to) the same question. */
 export interface PredictionMarketRef {
   venue: PredictionVenue;
-  /** Kalshi ticker, or Polymarket market slug. */
+  /** Kalshi market ticker or Polymarket market slug. */
   id: string;
-  /** The venue's exact title, so a reader can see how closely it matches. */
+  /** The market's own question, shown so users see exactly what the venue prices. */
   title: string;
   url: string;
+  /**
+   * Whether the market asks this question ("same": same deadline and the same
+   * claim) or only the closest thing the venue lists ("related"). Only "same"
+   * quotes feed the crowd's number and the venue arbitrage. Default "same".
+   */
+  match?: 'same' | 'related';
+  /** For related markets: how the venue's question differs from ours. */
+  note?: string;
 }
 
 /** The price of YES at a venue: the crowd's probability, as a fraction. */
 export interface PredictionQuote extends PredictionMarketRef {
   yes: number;
   asOf: string;
-  /** "live" from the venue, or a "sample" number for demos. */
-  basis: 'live' | 'sample';
+  /** live: fetched now. snapshot: a real quote captured on `asOf`, not live. sample: made up for demos. */
+  basis: 'live' | 'snapshot' | 'sample';
 }
 
 /** A yes/no question about the world tied to current events. */

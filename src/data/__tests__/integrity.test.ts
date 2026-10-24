@@ -3,6 +3,7 @@ import { COMPANY_SAMPLES } from '../companySamples';
 import { DEMO_TOPICS, demoCalls } from '../demoCalls';
 import { EVENTS } from '../events';
 import { MECHANISMS } from '../mechanisms';
+import { PREDICTION_SNAPSHOTS } from '../predictionSnapshots';
 import { THESES } from '../theses';
 import { UNDERLYINGS } from '../underlyings';
 import { betsExpressing, createLinkResolver } from '@/domain/catalysts';
@@ -309,5 +310,26 @@ describe('company samples', () => {
 
   it('only describe underlyings in the library', () => {
     expect(Object.keys(COMPANY_SAMPLES).filter((s) => !underlyingsBySymbol.has(s))).toEqual([]);
+  });
+});
+
+describe('prediction-market snapshots', () => {
+  const entries = Object.entries(PREDICTION_SNAPSHOTS).flatMap(([questionId, quotes]) => quotes.map((q) => [`${questionId} · ${q.venue}`, questionId, q] as const));
+
+  it.each(entries)('%s is a dated, real market on a real question', (_label, questionId, quote) => {
+    expect(eventIds.has(questionId)).toBe(true);
+    expect(quote.yes).toBeGreaterThan(0);
+    expect(quote.yes).toBeLessThan(1);
+    expect(quote.capturedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(quote.capturedOn <= now.toISOString().slice(0, 10)).toBe(true);
+    expect(quote.url).toMatch(quote.venue === 'kalshi' ? /^https:\/\/kalshi\.com\// : /^https:\/\/polymarket\.com\//);
+    expect(quote.title.length).toBeGreaterThan(10);
+    if (quote.match === 'related') expect(quote.note?.length ?? 0).toBeGreaterThan(20);
+  });
+
+  it('keep at most one quote per venue on a question', () => {
+    for (const quotes of Object.values(PREDICTION_SNAPSHOTS)) {
+      expect(duplicates(quotes.map((q) => q.venue))).toEqual([]);
+    }
   });
 });

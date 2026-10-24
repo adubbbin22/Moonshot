@@ -47,8 +47,11 @@ own it and what would prove you wrong.
   priced. Every bet opened from a question puts the same dollars on the
   Kalshi (or Polymarket) contract side by side: what each buys, what each
   pays if right, what each needs to go right, and how often the stock has
-  to follow the event for the options bet to be the better deal. Sample
-  odds by default; live ones through the demo server.
+  to follow the event for the options bet to be the better deal. Without
+  a backend the app shows real Kalshi and Polymarket quotes captured by
+  hand for five questions (dated, labelled "Snapshot"), the closest market
+  with a note where a venue doesn't list the exact question, and made-up
+  samples elsewhere; live quotes come through the demo server.
 - **Dig deeper before you bet:** every bet names its expiration day, what
   that day means, how it sits against the question's resolution and the
   next earnings report, and the same bet on later expirations, priced. Every
