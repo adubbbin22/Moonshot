@@ -45,7 +45,8 @@ Docs: https://docs.expo.dev/eas/index.md
 - Product direction: `docs/STRATEGY.md` (newest; supersedes PRODUCT.md where they differ). Product principles: `docs/PRODUCT.md`. Market data sourcing and licensing: `docs/DATA.md`. Code layout and backend plan: `docs/ARCHITECTURE.md`.
 - Every bet is a long option or a debit spread: defined risk, at least 3x payoff. `validateStructure` and `isAsymmetric` enforce this; keep them tested.
 - Prices only come through `src/services/marketData/` (see `docs/DATA.md`). Never ship vendor API keys in the app bundle.
-- `server/` is the Yahoo Finance demo server (Node, run with `npm run market-data`). Keep `yahoo-finance2` out of app code under `src/`.
+- `server/` is the demo server (Node, run with `npm run market-data`): Yahoo Finance chains and Claude thesis drafting. Keep `yahoo-finance2` and `@anthropic-ai/sdk` out of app code under `src/`; the app only talks to the server.
+- LLM output reaches the app only through `src/domain/thesisDraft.ts`: the model picks mechanisms from `src/data/mechanisms.ts` by id and never names a security, a price or a trade. Keep `validateDraft` tested.
 - Business rules live in `src/domain/` (pure TS, unit tested); screens stay thin.
 - Content reads go through `src/services/catalog.ts`; orders go through the `Broker` interface in `src/services/broker.ts`.
 - Sample content lives in `src/data/`; `src/data/__tests__/integrity.test.ts` must pass after any content change.

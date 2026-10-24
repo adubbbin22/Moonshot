@@ -1,11 +1,13 @@
 import { BETS } from '../bets';
 import { EVENTS } from '../events';
+import { MECHANISMS } from '../mechanisms';
 import { THESES } from '../theses';
 import { earliestExpiration, outlivesQuestion } from '@/domain/horizon';
 import { isSpread } from '@/domain/options';
 import { CATEGORY_ORDER } from '@/domain/questionSelector';
 import { isAsymmetric, minExpirationDate, priceStrategy } from '@/domain/strategy';
-import { allClaims, allSteps, treeBetIds } from '@/domain/thesisTree';
+import { resolveMechanisms } from '@/domain/thesisDraft';
+import { allClaims, allSteps } from '@/domain/thesisTree';
 import { listedExpirations, SYNTHETIC_UNDERLYINGS, syntheticChain } from '@/services/marketData/synthetic';
 
 /**
@@ -15,6 +17,9 @@ import { listedExpirations, SYNTHETIC_UNDERLYINGS, syntheticChain } from '@/serv
 
 const betIds = new Set(BETS.map((b) => b.id));
 const eventIds = new Set(EVENTS.map((e) => e.id));
+const mechanismIds = new Set(MECHANISMS.map((m) => m.id));
+// Prices, strikes, odds and multiples come from code, never from copy.
+const PRICE_LIKE = /[$%]|\d+(\.\d+)?x\b|\d+(\.\d+)?\s*(times|percent)\b/i;
 const now = new Date('2026-10-24T15:00:00.000Z');
 
 function duplicates(ids: string[]): string[] {
@@ -107,7 +112,7 @@ describe('thesis trees', () => {
     expect(tree.premises.length).toBeGreaterThanOrEqual(2);
     expect(tree.ifTrue.length).toBeGreaterThan(0);
     expect(tree.ifFalse.length).toBeGreaterThan(0);
-    expect(allSteps({ ifTrue: tree.ifTrue, ifFalse: [] }).some((s) => (s.bets ?? []).length > 0)).toBe(true);
+    expect(allSteps({ ifTrue: tree.ifTrue, ifFalse: [] }).some((s) => (s.mechanisms ?? []).length > 0)).toBe(true);
   });
 
   it.each(THESES.map((t) => [t.id, t] as const))('%s argues both sides of every claim', (_id, tree) => {
@@ -118,14 +123,10 @@ describe('thesis trees', () => {
     }
   });
 
-  it.each(THESES.map((t) => [t.id, t] as const))('%s only links bets that exist, each with a why and no prices', (_id, tree) => {
+  it.each(THESES.map((t) => [t.id, t] as const))('%s reaches bets only through mechanisms that exist', (_id, tree) => {
     for (const step of allSteps(tree)) {
-      for (const link of step.bets ?? []) {
-        expect(betIds.has(link.betId)).toBe(true);
-        expect(link.why.trim()).not.toBe('');
-        // Prices, strikes, odds and multiples come from code, never from copy.
-        expect(link.why).not.toMatch(/[$%]|\d+(\.\d+)?x\b|\d+(\.\d+)?\s*(times|percent)\b/i);
-      }
+      expect(step.bets).toBeUndefined();
+      for (const m of step.mechanisms ?? []) expect(mechanismIds.has(m)).toBe(true);
     }
   });
 
@@ -156,15 +157,43 @@ describe('thesis trees', () => {
     }
   });
 
-  it.each(THESES.map((t) => [t.id, t] as const))('%s asks "then what?" on every step with bets', (_id, tree) => {
+  it.each(THESES.map((t) => [t.id, t] as const))('%s asks "then what?" on every step with mechanisms', (_id, tree) => {
     const missing = allSteps(tree)
-      .filter((s) => (s.bets ?? []).length > 0 && !s.thenWhat?.trim())
+      .filter((s) => (s.mechanisms ?? []).length > 0 && !s.thenWhat?.trim())
       .map((s) => s.id);
     expect(missing).toEqual([]);
   });
 
+  it.each(THESES.map((t) => [t.id, t] as const))('%s leads to at least one bet once mechanisms resolve', (_id, tree) => {
+    const resolved = resolveMechanisms(tree, new Map(MECHANISMS.map((m) => [m.id, m])));
+    expect(allSteps(resolved).some((s) => (s.bets ?? []).length > 0)).toBe(true);
+  });
+
+  it('use every mechanism in the library', () => {
+    const used = new Set(THESES.flatMap((t) => allSteps(t).flatMap((s) => s.mechanisms ?? [])));
+    expect(MECHANISMS.map((m) => m.id).filter((id) => !used.has(id))).toEqual([]);
+  });
+});
+
+describe('mechanisms', () => {
+  it('have unique ids', () => {
+    expect(duplicates(MECHANISMS.map((m) => m.id))).toEqual([]);
+  });
+
+  it.each(MECHANISMS.map((m) => [m.id, m] as const))('%s describes the world and links real bets with a why and no prices', (_id, mechanism) => {
+    expect(mechanism.label.trim()).not.toBe('');
+    expect(mechanism.description.trim()).not.toBe('');
+    expect(mechanism.description).not.toMatch(PRICE_LIKE);
+    expect(mechanism.bets.length).toBeGreaterThan(0);
+    for (const link of mechanism.bets) {
+      expect(betIds.has(link.betId)).toBe(true);
+      expect(link.why.trim()).not.toBe('');
+      expect(link.why).not.toMatch(PRICE_LIKE);
+    }
+  });
+
   it('give every bet in the catalog a line of reasoning', () => {
-    const reachable = new Set(THESES.flatMap(treeBetIds));
+    const reachable = new Set(MECHANISMS.flatMap((m) => m.bets.map((b) => b.betId)));
     expect(BETS.map((b) => b.id).filter((id) => !reachable.has(id))).toEqual([]);
   });
 });

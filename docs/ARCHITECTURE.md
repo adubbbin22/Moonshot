@@ -58,14 +58,32 @@ data/*.ts          services/pricing ──► services/marketData ──► synt
   to spot (e.g. buy 1.30×, sell 1.33×) and a minimum days-to-expiry. Each time
   a bet is shown, it's priced against today's chain, so the catalog never
   goes stale.
-- **Thesis trees are curated content.** `data/theses.ts` holds each
-  belief's parts, its "which means…" steps and the links to bets, each with
-  a why. It stands in for the mechanism library in
-  [STRATEGY.md](STRATEGY.md): an LLM may later propose steps, but people
-  approve them and the links to bets stay curated. The user's ratings live in
-  the store, never in the content, and `components/BetExpressions.tsx`
-  renders the same filtered, expiry-ordered bet list for thesis steps and
-  for calls.
+- **The mechanism library** (`data/mechanisms.ts`) is the only way a thesis
+  reaches a bet. Each mechanism is a curated link from something happening
+  in the world to bets, each with a why. Thesis steps name mechanisms by id;
+  `domain/thesisDraft.ts#resolveMechanisms` fills in the bets when the
+  catalog loads. The user's ratings live in the store, never in the content,
+  and `components/BetExpressions.tsx` renders the same filtered,
+  expiry-ordered bet list for thesis steps and for calls.
+- **Thesis trees come from two places with one shape.** `data/theses.ts`
+  holds the five curated trees. Drafted trees come from an LLM through
+  `services/intelligence/thesisDrafter.ts`, which never runs a model in the
+  app: `proxy` posts the belief to our backend, `fixture` returns a canned
+  draft for demos, `off` hides the feature. Drafted trees carry `provenance`
+  and live in the store (`draftedTheses`); `hooks/useThesis` resolves an id
+  against the catalog, then the store, so every screen works on either.
+- **`domain/thesisDraft.ts` is the firewall as code.** `THESIS_DRAFT_SCHEMA`
+  is the structured output the model must fill. `validateDraft` rejects
+  prices, percentages, multiples, the word "should", any catalog ticker or
+  company name, unknown mechanism or question ids, cases without sources,
+  and stories that break no real part, and returns every problem so they can
+  go back to the model. `toThesisTree` turns a valid draft into a tree.
+- **`server/thesis.ts`** runs the pipeline with the Anthropic SDK: a draft
+  call with the system prompt (mechanism library, feed questions, the rules)
+  cached across requests, a review call that gives each past case a verdict
+  and drops the disputed ones, validation with one retry, and an `audit`
+  callback that the demo server appends to `server/logs/thesis-drafts.jsonl`.
+  Credentials stay on the server; the app only ever sees finished trees.
 - **`services/marketData/`** is the only place prices come from. Every
   provider implements `getChain(underlying, { minExpiration })` →
   `ChainSnapshot`:
@@ -131,9 +149,15 @@ Rough order of when each piece becomes necessary:
 2. **Accounts and persistence.** Auth, then server-side storage for profile,
    positions and theses. Postgres is a fine default (Supabase gives you auth,
    Postgres and row-level security in one).
-3. **Content service.** Events, thesis trees and bet templates as data with an
-   editorial workflow (draft → review → published). The `domain/types.ts`
-   shapes are the starting schema.
+3. **Content service.** Events, thesis trees, mechanisms and bet templates
+   as data with an editorial workflow (draft → review → published). The
+   `domain/types.ts` shapes are the starting schema. Drafted thesis trees
+   that users rate highly are the natural candidates for review into the
+   curated set.
+3a. **Thesis drafting.** `POST /thesis/draft` as in `server/thesis.ts`,
+   behind auth and a per-user budget, with the audit log in durable
+   storage. The firewall stays in `domain/thesisDraft.ts`, shared by the
+   server and the app.
 4. **News → question pipeline.** Ingest headlines, have an LLM draft
    candidate questions with a resolution date and criterion, and propose a
    structure (underlying, direction, strikes relative to spot, horizon) with

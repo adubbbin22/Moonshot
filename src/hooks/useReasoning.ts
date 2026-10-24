@@ -11,7 +11,7 @@ import {
 } from '@/domain/thesisTree';
 import type { ThesisTree } from '@/domain/types';
 import { formatPercent } from '@/lib/format';
-import { catalog } from '@/services/catalog';
+import { useThesis } from '@/hooks/useThesis';
 import { useAppState } from '@/state/store';
 
 export interface Reasoning {
@@ -44,7 +44,7 @@ function reasoningText(lines: ReasoningLine[], chain?: number): string {
 /** The user's line of reasoning from a thesis tree down to a bet, if they came from one. */
 export function useReasoning(betId: string, thesisId?: string, stepId?: string): Reasoning | undefined {
   const { thesisWork, calls } = useAppState();
-  const tree = thesisId ? catalog.getThesis(thesisId) : undefined;
+  const tree = useThesis(thesisId);
   const path = tree && stepId ? findStep(tree, stepId) : undefined;
   if (!tree || !stepId || !path) return undefined;
 

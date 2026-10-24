@@ -31,6 +31,11 @@ own it and what would prove you wrong.
 
   Code multiplies your ratings, so you see when the whole belief is less
   likely than it felt.
+- **Your own belief:** type what you think happens, and a model drafts the
+  tree for you to reason through. The model writes the reasoning and picks
+  from a curated library of world-to-market mechanisms; it never names a
+  security, a price or a trade, and code checks that before you see
+  anything. Off by default; see below.
 
 Both lead to the same **bet screen**. It shows the exact trade (e.g. "Buy the
 NVDA $235 call, sell the $240 call, Jan 2028") priced from the option chain,
@@ -87,11 +92,24 @@ EXPO_PUBLIC_MARKET_DATA=yahoo npx expo start -c    # terminal 2: the app
 Other sources (Alpaca keys for development, or our own backend) are
 configured in `.env.example`.
 
+### Draft a thesis from your own belief (Claude)
+
+The same demo server drafts thesis trees when the Anthropic SDK finds
+credentials. Model outputs are logged to `server/logs/thesis-drafts.jsonl`.
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... npm run market-data          # terminal 1
+EXPO_PUBLIC_INTELLIGENCE=proxy npx expo start -c          # terminal 2
+```
+
+Without credentials, `EXPO_PUBLIC_INTELLIGENCE=fixture` shows a canned sample
+draft so the flow can be demoed offline.
+
 | Script              | What it does                         |
 | ------------------- | ------------------------------------ |
 | `npm start`         | Expo dev server                      |
 | `npm run web`       | Run in the browser                   |
-| `npm run market-data` | Demo market data server (Yahoo Finance) on :8787 |
+| `npm run market-data` | Demo server on :8787: market data (Yahoo Finance) and thesis drafting (Claude) |
 | `npm test`          | Jest unit tests (domain, data, state) |
 | `npm run typecheck` | `tsc --noEmit`                       |
 | `npm run lint`      | ESLint via `expo lint`               |
@@ -112,7 +130,8 @@ src/
     calls.tsx          More calls (call → reveal deck)
     takes.tsx          Ways to express your takes: the bets that pay if you're right
     event/[id].tsx     A question: how it resolves, your call, bets for each side
-    thesis/[id].tsx    Thesis tree: gut check → break it down → what follows → bets
+    thesis/[id].tsx    Thesis tree: gut check → break it down → pre-mortem → what follows → bets
+    thesis/draft.tsx   Your own belief → a drafted tree
     bet/[id].tsx       Bet detail: legs, payoff, market odds, contracts, place (paper)
   domain/              Pure TypeScript: Black-Scholes and implied odds,
                        option legs and payoffs, strategy pricing, sizing,
@@ -120,16 +139,19 @@ src/
                        selector, horizon guard, thesis-tree chain math.
                        No React. Fully unit tested.
   data/                Sample questions (with resolution rules), bet
-                       templates, thesis trees (+ integrity tests)
+                       templates, thesis trees, the mechanism library
+                       (+ integrity tests)
   services/            catalog, marketData (synthetic | alpaca | proxy),
                        pricing cache, broker (paper, multi-leg orders),
-                       intelligence/narrator (take profile → plain English)
+                       intelligence/narrator (take profile → plain English),
+                       intelligence/thesisDrafter (belief → tree, via the backend)
   hooks/               usePricedBet(s), useTakeProfile, useNarrative,
                        useThesisWork, useReasoning
   state/               App state (React context + reducer)
   components/          UI kit and Moonshot-specific components
   theme/               Design tokens and labels
   test/                Shared test fixtures
-server/                Demo market data server (Yahoo Finance via yahoo-finance2)
+server/                Demo server: Yahoo Finance chains, and thesis drafting with
+                       the Anthropic SDK (draft → review → validate)
 docs/                  Product, data and architecture notes
 ```

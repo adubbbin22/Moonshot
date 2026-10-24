@@ -153,6 +153,20 @@ export interface ThesisBetLink {
   why: string;
 }
 
+/**
+ * A curated link from the world to the market: the last step from a claim
+ * to the bets that express it. The mechanism library is the only way a
+ * thesis reaches a bet, so an LLM drafting a thesis picks a mechanism by id
+ * and never names a security.
+ */
+export interface Mechanism {
+  id: string;
+  label: string;
+  /** What has to be happening in the world for this to pay. Written for whoever (or whatever) picks mechanisms. */
+  description: string;
+  bets: ThesisBetLink[];
+}
+
 /** A "which means…" step: what follows if the step before it is true. */
 export interface ThesisStep {
   id: string;
@@ -162,7 +176,9 @@ export interface ThesisStep {
   /** The strongest case against this step. */
   against: string;
   check?: ClaimCheck;
-  /** Bets that pay if the chain up to and including this step holds. */
+  /** Mechanisms from the library that this step sets in motion. */
+  mechanisms?: string[];
+  /** Bets that pay if the chain up to and including this step holds. Derived from `mechanisms` by the catalog; content never sets it. */
   bets?: ThesisBetLink[];
   /**
    * Second-order effect: the response this step provokes that could undo it
@@ -179,6 +195,8 @@ export interface ReferenceCase {
   happened: boolean;
   /** One line on what actually happened. */
   note: string;
+  /** Where to check it. Required on drafted cases, which drive a number without a human having read them. */
+  source?: string;
 }
 
 /** The outside view: how cases like this one have gone before. */
@@ -199,15 +217,29 @@ export interface FailureStory {
   signal: string;
 }
 
+/** Where a thesis tree came from. Curated trees have none. */
+export interface ThesisProvenance {
+  kind: 'drafted';
+  /** The belief in the user's own words. */
+  prompt: string;
+  model: string;
+  draftedAt: string;
+  /** What the review pass did: cases it dropped as disputed, and anything it flagged. */
+  review?: { droppedCases: number; notes: string[] };
+}
+
 /**
  * A thesis tree: a big belief broken into the parts it depends on, then the
  * chains of consequences that follow if it's true or false, ending in bets.
  *
- * Written and reviewed by people (the "mechanism library" in
- * docs/STRATEGY.md). Every user who reaches a step sees the same bets.
+ * Curated trees are written and reviewed by people. Drafted trees come from
+ * an LLM inside the firewall (see domain/thesisDraft.ts): it writes the
+ * reasoning, picks mechanisms by id, and never names a security or a price.
+ * Either way, every user who reaches a step sees the same bets.
  */
 export interface ThesisTree {
   id: string;
+  provenance?: ThesisProvenance;
   title: string;
   /** The question that opens it: "Do you believe in AI?" */
   hook: string;

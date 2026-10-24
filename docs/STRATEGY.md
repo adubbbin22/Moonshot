@@ -149,7 +149,8 @@ Every specialist ranked this first. It's also a compliance control.
   second "rules lawyer" LLM pass tries to break it → automatic checks
   (expirations, open interest, bid/ask width) → human approval → humans
   resolve, with a public log and an appeal window. **An LLM never resolves a
-  question.**
+  question.** The thesis drafter (section 3) already runs the first three
+  steps of this shape.
 
 ### 2. Call → Reveal
 
@@ -201,11 +202,33 @@ _Built in the prototype without the LLM (October 2026), in `src/app/thesis/`:_
   first draft of "your why".
 - Calls on feed questions fill in matching claims ("from your call"), and
   takes and questions link to the tree they belong to.
-- Five curated trees stand in for the mechanism library. Every bet in the
-  catalog is reachable from at least one tree.
-- Not built yet: LLM-proposed steps, and checkpoint questions per step. The
-  pre-mortem covers the steelman → kill-criteria idea for a belief's parts,
-  but not for individual steps.
+- **The mechanism library is real** (`src/data/mechanisms.ts`): fifteen
+  curated links from something happening in the world to the bets that pay
+  if it does. A thesis step names mechanisms by id; code resolves them to
+  bets. It's the only way any thesis, curated or drafted, reaches a bet.
+- **An LLM drafts trees from the user's own belief**, on the server, inside
+  the firewall (`src/domain/thesisDraft.ts`, `server/thesis.ts`):
+  1. *Draft.* The model restates the belief as a claim with a settle date,
+     proposes the reference class and past cases (each with a source), the
+     parts, the pre-mortem stories and the "which means…" steps with their
+     "then what?". It reaches the market only by naming mechanism ids. It is
+     told, and code checks, that it never writes a price, a percentage, a
+     multiple, a security or the word "should".
+  2. *Review.* A second call acts as fact checker and rules lawyer: it gives
+     every past case a verdict (supported, disputed, unsure) and flags
+     anything an editor would. Disputed cases are dropped before the user
+     sees the tree; the flags travel with it.
+  3. *Validate.* Code checks the firewall and the catalog (mechanism ids,
+     question ids, sources on every case, stories that break real parts).
+     Problems go back to the model once; a second failure is an error, not
+     a tree.
+  Every model output is appended to an audit log. The tree the app receives
+  has the same shape as a curated one, plus provenance, and the screens say
+  so: "Drafted by AI from your belief", sources under each case, and a note
+  that the cases haven't been checked by a person.
+- Not built yet: checkpoint questions per step, a human review queue that
+  promotes good drafted trees to the curated set, and a web-search pass so
+  the reviewer checks sources rather than its own memory.
 
 What it does:
 1. **Restate:** the user's belief ("the Gulf stays a mess") becomes a claim
@@ -532,6 +555,8 @@ likely with NFA registration, and no sports, elections or war.
 - Thinking tools in the Thesis Tree: outside view with a blend option,
   pre-mortem with kill criteria saved on bets, and "then what?" on every
   step with bets.
+- The mechanism library, and LLM-drafted thesis trees from the user's own
+  belief (draft → review → validate, on the server, inside the firewall).
 - Copy fixes: "Wrong: lose what you paid", "Expect most to expire worthless.
   Size them so that's fine."
 
@@ -551,8 +576,10 @@ likely with NFA registration, and no sports, elections or war.
 - Vintages and the night sky.
 
 **Then: the smart layer (needs a backend and an LLM API)**
-- LLM-proposed steps for the Thesis Tree, inside the firewall, reviewed into
-  the mechanism library.
+- A review queue that promotes good drafted trees into the curated set, and
+  a web-search pass so the reviewer checks sources rather than its memory.
+- LLM-drafted feed questions (the question pipeline below), with the same
+  draft → rules-lawyer → human-approval shape.
 - The question pipeline (LLM draft → rules-lawyer pass → human approval).
 - WORM logging of every LLM output.
 

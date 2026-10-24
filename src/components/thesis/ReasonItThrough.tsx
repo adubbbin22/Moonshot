@@ -3,12 +3,12 @@ import { Pressable, StyleSheet } from 'react-native';
 
 import { Text } from '@/components/ui';
 import { treesCheckedBy } from '@/domain/thesisTree';
-import { catalog } from '@/services/catalog';
+import { useTheses } from '@/hooks/useThesis';
 import { colors, radius, spacing } from '@/theme/tokens';
 
 /** Links a question to the thesis trees it checks, so a quick call can turn into reasoning. */
 export function ReasonItThrough({ questionId }: { questionId: string }) {
-  const trees = treesCheckedBy(catalog.listTheses(), questionId);
+  const trees = treesCheckedBy(useTheses(), questionId);
   return trees.map((tree) => (
     <Pressable
       key={tree.id}

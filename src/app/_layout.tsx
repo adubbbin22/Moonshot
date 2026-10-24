@@ -43,6 +43,7 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="event/[id]" options={{ title: '' }} />
         <Stack.Screen name="thesis/[id]" options={{ title: '' }} />
+        <Stack.Screen name="thesis/draft" options={{ title: '' }} />
         <Stack.Screen name="bet/[id]" options={{ title: '', presentation: 'modal' }} />
         <Stack.Screen name="takes" options={{ title: '' }} />
         <Stack.Screen name="calls" options={{ title: '' }} />

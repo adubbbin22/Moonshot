@@ -1,17 +1,17 @@
 import type { ThesisTree } from '@/domain/types';
 
 /**
- * SAMPLE THESIS TREES. Each one breaks a big belief into the parts it
- * depends on, then follows "which means…" steps to the bets that pay if the
- * chain holds. This is the human-written stand-in for the mechanism library
- * in docs/STRATEGY.md: an LLM may later propose steps, but people approve
- * them, and the links to bets stay curated.
+ * CURATED THESIS TREES. Each one breaks a big belief into the parts it
+ * depends on, then follows "which means…" steps to the mechanisms (see
+ * mechanisms.ts) that lead to bets. An LLM can draft trees of the same shape
+ * from a user's own belief (src/domain/thesisDraft.ts); these five are the
+ * human-written ones.
  *
  * Writing rules:
  * - A belief's parts should add up to the belief: if every part holds, so
  *   does the belief.
  * - Every claim gets its strongest case against, written in good faith.
- * - No numbers in bet whys. Prices, strikes and odds come from code.
+ * - Steps reach bets only through `mechanisms`. Never name a security here.
  * - `check` points at a feed question whose answer tests the claim, and
  *   which side of it means the claim is true.
  *
@@ -88,16 +88,7 @@ export const THESES: ThesisTree[] = [
         against: 'Efficiency could outrun demand. If models get much cheaper to run, the world may need fewer chips than today’s spending plans assume.',
         thenWhat: 'High chip profits pull in competitors, and the biggest customers design their own chips. Margins can fall even while demand grows.',
         check: { questionId: 'nvda-growth-2027', side: 'yes' },
-        bets: [
-          {
-            betId: 'ai-compute-calls',
-            why: 'NVIDIA sells most of the chips AI runs on. If compute spending keeps compounding, its sales and its stock have room to run.',
-          },
-          {
-            betId: 'semis-basket',
-            why: 'Spreads the bet across the whole chip industry, so you don’t have to pick the single winner. Pays if chip stocks as a group rise well past today’s prices.',
-          },
-        ],
+        mechanisms: ['ai-chip-demand'],
       },
       {
         id: 'power',
@@ -105,12 +96,7 @@ export const THESES: ThesisTree[] = [
         because: 'A large new data center can draw as much power as a small city. Chips arrive in months; power plants and grid lines take years.',
         against: 'The power may turn up faster than expected: on-site generation, more efficient chips, or building where there’s spare capacity.',
         thenWhat: 'Power that scarce draws in new supply, and political pressure to cap what generators can charge.',
-        bets: [
-          {
-            betId: 'ai-power-calls',
-            why: 'The largest US nuclear operator sells always-on, carbon-free power, which is exactly what data centers are signing long contracts for.',
-          },
-        ],
+        mechanisms: ['power-scarcity'],
         next: [
           {
             id: 'power-gas',
@@ -118,12 +104,7 @@ export const THESES: ThesisTree[] = [
             because: 'A gas plant can be running in a couple of years; a reactor takes about a decade. Whoever needs power soon burns gas.',
             against: 'Turbine makers are booked up for years, and gas could stay cheap anyway if production keeps rising.',
             thenWhat: 'More demand for gas brings more drilling, which can keep gas prices down.',
-            bets: [
-              {
-                betId: 'natgas-calls',
-                why: 'One of the largest US gas producers. More gas burned for power means more demand for what it sells.',
-              },
-            ],
+            mechanisms: ['gas-for-power'],
           },
           {
             id: 'power-nuclear',
@@ -132,16 +113,7 @@ export const THESES: ThesisTree[] = [
             against: 'New reactors have a long record of delays and cost overruns, and licensing moves slowly.',
             thenWhat: 'A rush of reactor projects invites scrutiny. One costly delay can sour investors on the whole group.',
             check: { questionId: 'smr-grid-2028', side: 'yes' },
-            bets: [
-              {
-                betId: 'smr-nuclear',
-                why: 'A small-reactor company with no revenue yet. If regulators approve its design and customers sign, the stock could rerate a long way.',
-              },
-              {
-                betId: 'uranium-calls',
-                why: 'More reactors need more fuel, and new uranium mines take years to open. Tight supply tends to move prices fast.',
-              },
-            ],
+            mechanisms: ['nuclear-buildout'],
           },
         ],
       },
@@ -152,12 +124,7 @@ export const THESES: ThesisTree[] = [
         against: 'Robots have to work safely in messy places, and hardware improves much more slowly than software. Demos aren’t deployments.',
         thenWhat: 'If humanoid robots start working, rivals race in, many of them cheaper, and prices fall fast.',
         check: { questionId: 'optimus-1000-2027', side: 'yes' },
-        bets: [
-          {
-            betId: 'robotics-calls',
-            why: 'Tesla is the loudest humanoid-robot bet among big companies. Pays if the market starts pricing robots into the stock.',
-          },
-        ],
+        mechanisms: ['humanoid-robots'],
       },
     ],
     ifFalse: [
@@ -167,12 +134,7 @@ export const THESES: ThesisTree[] = [
         because: 'Big tech is spending enormous sums on data centers. If adoption is slow, that spending stops looking like an investment, and stocks priced for AI growth fall.',
         against: 'The biggest spenders can fund this from cash flow for years, and investors may stay patient for the payoff.',
         thenWhat: 'Falling stocks bring rate cuts and buybacks, which can cushion the drop before it gets deep.',
-        bets: [
-          {
-            betId: 'ai-bubble-puts',
-            why: 'The Nasdaq-100 is dominated by the companies doing the spending. This put spread pays if the index falls hard by expiry.',
-          },
-        ],
+        mechanisms: ['ai-capex-bust'],
       },
     ],
   },
@@ -240,12 +202,7 @@ export const THESES: ThesisTree[] = [
         because: 'When buyers need reliable power badly, whoever already runs working plants can sign long contracts at high prices.',
         against: 'Regulators may cap prices or make utilities share the gains with households.',
         thenWhat: 'Scarce power invites regulators to cap prices and new plants to compete for the same contracts.',
-        bets: [
-          {
-            betId: 'ai-power-calls',
-            why: 'Owns the largest US nuclear fleet: plants that already exist and run around the clock. That’s the scarce thing in this story.',
-          },
-        ],
+        mechanisms: ['power-scarcity'],
       },
       {
         id: 'gas',
@@ -253,12 +210,7 @@ export const THESES: ThesisTree[] = [
         because: 'Gas plants are the fastest reliable power to build, so they take most of the near-term demand.',
         against: 'Turbines are back-ordered for years, and more gas burned might not mean higher prices if production keeps rising.',
         thenWhat: 'More demand brings more drilling, which can keep gas prices in check.',
-        bets: [
-          {
-            betId: 'natgas-calls',
-            why: 'A large US gas producer. More gas burned for power means more demand for its product.',
-          },
-        ],
+        mechanisms: ['gas-for-power'],
       },
       {
         id: 'nuclear',
@@ -267,16 +219,7 @@ export const THESES: ThesisTree[] = [
         against: 'Nuclear projects run late and over budget far more often than not.',
         thenWhat: 'Enthusiasm can run ahead of reality. Delays and cost overruns can deflate the whole group.',
         check: { questionId: 'smr-grid-2028', side: 'yes' },
-        bets: [
-          {
-            betId: 'smr-nuclear',
-            why: 'If small reactors get licensed and win contracts, the companies building them get valued on future power sales.',
-          },
-          {
-            betId: 'uranium-calls',
-            why: 'Restarted and new reactors all need fuel, and mine supply can’t respond quickly.',
-          },
-        ],
+        mechanisms: ['nuclear-buildout'],
       },
     ],
     ifFalse: [
@@ -354,12 +297,7 @@ export const THESES: ThesisTree[] = [
         against: 'Governments may spend the money at home or on cheap drones rather than on big US defense contractors.',
         thenWhat: 'Bigger budgets bring more competition for contracts and pressure to buy cheaper weapons, like drones.',
         check: { questionId: 'nato-spending-2027', side: 'yes' },
-        bets: [
-          {
-            betId: 'defense-calls',
-            why: 'Lockheed builds the fighter jets and missiles allies are ordering. Rising budgets become a long order backlog.',
-          },
-        ],
+        mechanisms: ['defense-budgets'],
       },
       {
         id: 'shipping',
@@ -368,12 +306,7 @@ export const THESES: ThesisTree[] = [
         against: 'Naval escorts or a ceasefire could reopen the route quickly.',
         thenWhat: 'High day rates pull in more ships and keep old tankers sailing longer, which pushes rates back down.',
         check: { questionId: 'hormuz-transits-2027', side: 'no' },
-        bets: [
-          {
-            betId: 'tanker-calls',
-            why: 'Longer voyages mean each tanker is busy for longer, so day rates rise and tanker owners earn more.',
-          },
-        ],
+        mechanisms: ['tanker-rates'],
         next: [
           {
             id: 'oil',
@@ -382,12 +315,7 @@ export const THESES: ThesisTree[] = [
             against: 'Spare capacity elsewhere and emergency reserves can cover a lot of disruption.',
             thenWhat: 'High prices cut demand and bring more drilling and emergency reserve releases, which pull prices back.',
             check: { questionId: 'brent-100-2027', side: 'yes' },
-            bets: [
-              {
-                betId: 'oil-calls',
-                why: 'Tracks the price of oil. Pays if crude rises sharply by expiry.',
-              },
-            ],
+            mechanisms: ['oil-spike'],
           },
         ],
       },
@@ -398,12 +326,7 @@ export const THESES: ThesisTree[] = [
         against: 'Gold pays no interest. If rates stay high, holding it is expensive, and the fear may already be in the price.',
         thenWhat: 'If the scare fades or rates rise, the money that rushed into gold can leave just as fast.',
         check: { questionId: 'gold-higher-2027', side: 'yes' },
-        bets: [
-          {
-            betId: 'gold-calls',
-            why: 'Tracks the price of gold. Pays if gold climbs well past today’s price by expiry.',
-          },
-        ],
+        mechanisms: ['gold-higher'],
       },
     ],
     ifFalse: [
@@ -414,12 +337,7 @@ export const THESES: ThesisTree[] = [
         against: 'Peace deals often break down, and oil producers can cut supply to hold prices up.',
         thenWhat: 'Cheap fuel brings more flights, and fare wars can eat the savings.',
         check: { questionId: 'hormuz-transits-2027', side: 'yes' },
-        bets: [
-          {
-            betId: 'airlines-calls',
-            why: 'Fuel is an airline’s biggest variable cost. Cheaper oil goes almost straight to airline profits.',
-          },
-        ],
+        mechanisms: ['cheap-fuel-airlines'],
       },
     ],
   },
@@ -490,12 +408,7 @@ export const THESES: ThesisTree[] = [
         because: 'Small companies carry more floating-rate debt than big ones, so lower rates feed straight into their profits.',
         against: 'Rates usually fall because the economy is weak, and small companies suffer most in a recession.',
         thenWhat: 'If cuts come because the economy is weak, falling profits can outweigh cheaper borrowing.',
-        bets: [
-          {
-            betId: 'small-caps-calls',
-            why: 'Tracks the Russell 2000 index of small US companies. Pays if they rally well past today’s level by expiry.',
-          },
-        ],
+        mechanisms: ['rate-relief-small-caps'],
       },
       {
         id: 'innovators',
@@ -503,12 +416,7 @@ export const THESES: ThesisTree[] = [
         because: 'Biotechs burn cash for years before they have a product. Cheap money makes that funding easier and makes future profits worth more today.',
         against: 'Biotech also lives or dies on drug approvals and pricing rules, which have nothing to do with rates.',
         thenWhat: 'Cheap money brings a wave of new share sales, which can weigh on biotech stock prices.',
-        bets: [
-          {
-            betId: 'biotech-calls',
-            why: 'Tracks small and mid-size biotech stocks, which tend to move the most when funding gets easier.',
-          },
-        ],
+        mechanisms: ['biotech-funding'],
       },
       {
         id: 'gold-cheap',
@@ -517,12 +425,7 @@ export const THESES: ThesisTree[] = [
         against: 'If rates fall because inflation is beaten, there’s less reason to own an inflation hedge.',
         thenWhat: 'If cuts revive growth and inflation fears fade, there’s less reason to hold gold.',
         check: { questionId: 'gold-higher-2027', side: 'yes' },
-        bets: [
-          {
-            betId: 'gold-calls',
-            why: 'Tracks the price of gold. Pays if gold climbs well past today’s price by expiry.',
-          },
-        ],
+        mechanisms: ['gold-higher'],
       },
     ],
     ifFalse: [
@@ -532,12 +435,7 @@ export const THESES: ThesisTree[] = [
         because: 'If rates stay high because prices keep rising, cash buys less every year.',
         against: 'High rates also pay savers well, which makes holding cash less painful.',
         thenWhat: 'If inflation sticks, rates may rise further, and higher rates make gold costlier to hold.',
-        bets: [
-          {
-            betId: 'gold-calls',
-            why: 'Gold has held its value through long stretches of inflation. It’s what people buy when cash loses purchasing power.',
-          },
-        ],
+        mechanisms: ['gold-higher'],
       },
     ],
   },
@@ -608,12 +506,7 @@ export const THESES: ThesisTree[] = [
         against: 'Getting enough bandwidth from orbit to an ordinary phone is hard, and bigger rivals are racing to do it.',
         thenWhat: 'If it works, bigger players with more satellites and spectrum can copy it.',
         check: { questionId: 'asts-satellites-2027', side: 'yes' },
-        bets: [
-          {
-            betId: 'satellite-phone',
-            why: 'AST SpaceMobile is building cell towers in orbit with carrier partners. If launches stay on schedule, revenue could arrive fast.',
-          },
-        ],
+        mechanisms: ['direct-to-phone'],
       },
       {
         id: 'second-launcher',
@@ -621,12 +514,7 @@ export const THESES: ThesisTree[] = [
         because: 'As launch demand grows, customers want a reliable alternative to the leader.',
         against: 'New rockets often fail early or slip for years.',
         thenWhat: 'If launch demand booms, the leader cuts prices and new rivals appear.',
-        bets: [
-          {
-            betId: 'launch-calls',
-            why: 'Rocket Lab flies more often than any US launcher but one, and it’s building a bigger rocket. Pays if the market starts pricing it as the clear number two.',
-          },
-        ],
+        mechanisms: ['second-launcher'],
       },
     ],
     ifFalse: [

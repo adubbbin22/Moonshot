@@ -104,3 +104,12 @@ describe('thesis work', () => {
     expect(state.thesisWork.ai).toEqual({ ratings: {}, lasts: { compute: 0.5 }, marked: ['pricey'], blend: true });
   });
 });
+
+describe('drafted theses', () => {
+  it('keeps drafted trees by id, replacing one with the same id', () => {
+    const tree = { id: 'draft-1', title: 'A' } as never;
+    let state = reducer(initialState, { type: 'addDraftedThesis', tree });
+    state = reducer(state, { type: 'addDraftedThesis', tree: { id: 'draft-1', title: 'B' } as never });
+    expect(state.draftedTheses).toEqual({ 'draft-1': { id: 'draft-1', title: 'B' } });
+  });
+});

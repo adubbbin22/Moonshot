@@ -12,8 +12,16 @@ const VERDICTS = {
   close: 'Your gut is close to how past cases went.',
 } as const;
 
+export interface OutsideViewCardProps {
+  view: OutsideView;
+  rate: OutsideViewRate;
+  gut?: number;
+  /** Drafted by a model: show sources and say the cases are unverified. */
+  drafted?: boolean;
+}
+
 /** How cases like this one went before: the number to beat before reasoning from the specifics. */
-export function OutsideViewCard({ view, rate, gut }: { view: OutsideView; rate: OutsideViewRate; gut?: number }) {
+export function OutsideViewCard({ view, rate, gut, drafted = false }: OutsideViewCardProps) {
   return (
     <Card>
       <Text variant="label" tone="muted">
@@ -30,6 +38,11 @@ export function OutsideViewCard({ view, rate, gut }: { view: OutsideView; rate: 
             <Text variant="caption" tone="muted">
               {c.note}
             </Text>
+            {c.source ? (
+              <Text variant="caption" tone="faint">
+                Source: {c.source}
+              </Text>
+            ) : null}
           </View>
         </View>
       ))}
@@ -45,6 +58,12 @@ export function OutsideViewCard({ view, rate, gut }: { view: OutsideView; rate: 
       {gut !== undefined ? (
         <Text>
           Your gut said {formatPercent(gut)}. {VERDICTS[gutCheck(gut, rate.rate)]}
+        </Text>
+      ) : null}
+      {drafted ? (
+        <Text variant="caption" tone="downside">
+          These cases were drafted by a model and haven’t been checked by a person. The rate is only as good as they
+          are.
         </Text>
       ) : null}
     </Card>

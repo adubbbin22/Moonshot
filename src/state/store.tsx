@@ -11,11 +11,12 @@ import { CONTRACT_MULTIPLIER, isBullish } from '@/domain/options';
 import { checkStake } from '@/domain/sizing';
 import type { PricedStrategy } from '@/domain/strategy';
 import { EMPTY_WORK, type ThesisWork } from '@/domain/thesisTree';
-import type { Call, Category, Position, PositionSource, Profile } from '@/domain/types';
+import type { Call, Category, Position, PositionSource, Profile, ThesisTree } from '@/domain/types';
 import { paperBroker, type Broker } from '@/services/broker';
 
 /**
- * App state: the user's profile, calls, open bets and their reasoning on each thesis.
+ * App state: the user's profile, calls, open bets, their reasoning on each
+ * thesis, and the theses drafted from their own beliefs.
  *
  * Held in memory for now. Persisting it (device storage, then the backend
  * once accounts exist) is a drop-in change inside this module.
@@ -32,6 +33,8 @@ export interface AppState {
   positions: Position[];
   /** Thesis id -> the user's gut number and ratings on that tree. */
   thesisWork: Record<string, ThesisWork>;
+  /** Trees drafted from the user's own beliefs, by id. Curated trees live in the catalog. */
+  draftedTheses: Record<string, ThesisTree>;
   /** Screen to open once onboarding completes (the navigator lands on the feed first). */
   pendingLanding?: 'takes';
 }
@@ -50,6 +53,7 @@ export type Action =
   | { type: 'toggleFailure'; thesisId: string; storyId: string }
   | { type: 'setBlend'; thesisId: string; blend: boolean }
   | { type: 'resetThesis'; thesisId: string }
+  | { type: 'addDraftedThesis'; tree: ThesisTree }
   | { type: 'reset' };
 
 export const initialState: AppState = {
@@ -59,6 +63,7 @@ export const initialState: AppState = {
   seedTopics: [],
   positions: [],
   thesisWork: {},
+  draftedTheses: {},
 };
 
 function updateWork(state: AppState, thesisId: string, update: (work: ThesisWork) => ThesisWork): AppState {
@@ -117,6 +122,8 @@ export function reducer(state: AppState, action: Action): AppState {
       }));
     case 'setBlend':
       return updateWork(state, action.thesisId, (work) => ({ ...work, blend: action.blend }));
+    case 'addDraftedThesis':
+      return { ...state, draftedTheses: { ...state.draftedTheses, [action.tree.id]: action.tree } };
     case 'resetThesis': {
       const thesisWork = { ...state.thesisWork };
       delete thesisWork[action.thesisId];

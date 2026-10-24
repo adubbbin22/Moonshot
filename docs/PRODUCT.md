@@ -84,7 +84,7 @@ record are next.
 | --- | --- |
 | Onboarding | Philosophy, how it works, budget picker ($100–$1,000/mo), disclaimer |
 | Feed | 5 sample event questions; each linked bet shows live cost, max payout and market odds |
-| Thesis | 5 thesis trees: gut check and outside view → break the belief into parts (for, against, rate each) → pre-mortem (kill criteria) → "which means…" steps, each with a "then what?" → bets with why and where it could break. Code multiplies the ratings |
+| Thesis | 5 curated trees, plus trees drafted by Claude from the user's own belief (server-side, inside the firewall): gut check and outside view → parts → pre-mortem → "which means…" steps with "then what?" → bets via the mechanism library. Code multiplies the ratings |
 | Bet ideas | 17 strategy templates (strikes relative to spot, minimum days to expiry) priced against the chain |
 | Bet screen | Exact legs, payoff diagram, market-odds ladder, contract picker within budget, kill criteria, "your why" |
 | Portfolio | Total at risk, "if your best one hits", positions with legs, breakeven, thesis |

@@ -11,9 +11,9 @@ import { BranchSection } from '@/components/thesis/StepTree';
 import { Button, Card, Screen, Text } from '@/components/ui';
 import { leaningBranch } from '@/domain/thesisTree';
 import type { ThesisTree } from '@/domain/types';
+import { useThesis } from '@/hooks/useThesis';
 import { useThesisWork } from '@/hooks/useThesisWork';
 import { formatPercent } from '@/lib/format';
-import { catalog } from '@/services/catalog';
 import { colors, radius, spacing } from '@/theme/tokens';
 
 type Stage = 'gut' | 'parts' | 'premortem' | 'follows';
@@ -36,7 +36,7 @@ const STAGES: { id: Stage; label: string }[] = [
  */
 export default function ThesisScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const tree = catalog.getThesis(id);
+  const tree = useThesis(id);
   if (!tree) {
     return (
       <Screen edges={[]}>
@@ -69,6 +69,7 @@ function ThesisFlow({ tree }: { tree: ThesisTree }) {
         edges={['bottom']}
         footer={<Button label="Break it down" disabled={!reached.parts} onPress={() => setStage('parts')} />}>
         {stageBar}
+        {tree.provenance ? <DraftedNote provenance={tree.provenance} /> : null}
         <Text variant="caption" tone="faint">
           {tree.emoji} {tree.hook}
         </Text>
@@ -79,7 +80,9 @@ function ThesisFlow({ tree }: { tree: ThesisTree }) {
         <Card>
           <LikelihoodPicker prompt="How likely is it?" value={work.gut} onChange={work.setGut} />
         </Card>
-        {work.gut !== undefined ? <OutsideViewCard view={tree.outsideView} rate={work.outside} gut={work.gut} /> : null}
+        {work.gut !== undefined ? (
+          <OutsideViewCard view={tree.outsideView} rate={work.outside} gut={work.gut} drafted={Boolean(tree.provenance)} />
+        ) : null}
       </Screen>
     );
   }
@@ -216,6 +219,33 @@ function ThesisFlow({ tree }: { tree: ThesisTree }) {
   );
 }
 
+/** Where a drafted tree came from, and what that means for trusting it. */
+function DraftedNote({ provenance }: { provenance: NonNullable<ThesisTree['provenance']> }) {
+  const { review } = provenance;
+  return (
+    <Card style={styles.drafted}>
+      <Text variant="label" tone="muted">
+        Drafted by AI from your belief
+      </Text>
+      <Text variant="caption" tone="faint">
+        “{provenance.prompt}”
+      </Text>
+      <Text variant="caption" tone="muted">
+        The reasoning and the past cases were written by a model, not reviewed by a person. Check the sources before
+        trusting the numbers.
+        {review
+          ? ` A second pass dropped ${review.droppedCases} ${review.droppedCases === 1 ? 'case' : 'cases'} it disputed.`
+          : ''}
+      </Text>
+      {review?.notes.map((note) => (
+        <Text key={note} variant="caption" tone="muted">
+          • {note}
+        </Text>
+      ))}
+    </Card>
+  );
+}
+
 function StageBar({
   stage,
   reached,
@@ -254,5 +284,6 @@ const styles = StyleSheet.create({
   stageBar: { height: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceRaised },
   stageReached: { backgroundColor: colors.accent },
   belief: { borderColor: colors.violet },
+  drafted: { borderColor: colors.no },
   beliefNumber: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
 });
