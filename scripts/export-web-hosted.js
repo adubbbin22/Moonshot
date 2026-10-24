@@ -30,15 +30,18 @@ execFileSync('npx', ['expo', 'export', '--platform', 'web', '--output-dir', out]
   shell: process.platform === 'win32',
 });
 
-const bundlesDir = path.join(out, '_expo', 'static', 'js', 'web');
+// Some hosts reserve top-level names starting with "_", so the bundle folder moves.
+const BUNDLE_DIR = 'expo-static';
+fs.renameSync(path.join(out, '_expo'), path.join(out, BUNDLE_DIR));
+const bundlesDir = path.join(out, BUNDLE_DIR, 'static', 'js', 'web');
 const bundles = fs.readdirSync(bundlesDir).map((f) => path.join(bundlesDir, f));
 const indexPath = path.join(out, 'index.html');
 
-// 1. Relative references.
+// 1. Relative references, pointing at the renamed folder.
 for (const file of [indexPath, ...bundles]) {
   const source = fs.readFileSync(file, 'utf8');
   const relative = source
-    .replace(/"\/_expo\//g, '"_expo/')
+    .replace(/"\/_expo\//g, `"${BUNDLE_DIR}/`)
     .replace(/"\/assets\//g, '"assets/')
     .replace(/"\/favicon\.ico"/g, '"favicon.ico"');
   if (relative !== source) fs.writeFileSync(file, relative);
